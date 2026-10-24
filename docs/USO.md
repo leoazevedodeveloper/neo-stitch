@@ -1,0 +1,20 @@
+# Usar o Neo Stitch
+
+O guia completo do canvas. Visão geral e instalação: [README](../README.md).
+
+
+- **Novo projeto:** `+` na tela inicial → nome, tipo, descrição. O Claude propõe direções de estilo, você liga ou desliga e gera.
+- **Pedido:** `+` numa tela, ou selecione imagens/referências e tecle `N`. Escreva a intenção e envie com `⌘↵`.
+- **Referências:** cole (`⌘V`, cai embaixo do cursor) ou arraste imagens para o canvas. Ela fica solta onde você a colocou. Ligada a um pedido (pela alça da direita ou selecionando e teclando `N`), passa a fazer parte do galho dele: some quando o galho recolhe e anda junto quando você o arrasta.
+- **Pedido de vídeo:** selecione uma imagem e tecle `V` (ou o claquete na barra, no visualizador ou no botão direito → "Pedido de vídeo"). Descreva o que ganha vida, escolha os modelos (cada um gera um vídeo; o menu mostra custo, ranking público e o veredito do nosso teste), a duração e a resolução, e envie. Os vídeos penduram no pedido; a imagem de origem ganha o selo de fogo, que abre a página dela. No visualizador o vídeo toca em loop, `espaço` pausa, e o comentário guarda o segundo em que foi feito.
+- **Fogo (em desenvolvimento):** a imagem que avança (ganha vídeo ou uma tentativa de HTML em `impl/<código>/`) recebe o selo de fogo e conta como ativa no `⌘A`. Cada uma tem a própria página (`#/p/<projeto>/f/<código>`): a imagem e os vídeos tocando juntos, com favorita/aprovada/descartada e foco em tela cheia (`←`/`→`, `F`/`A`/`D`). Chega-se a ela pelo selo, pela barra da esquerda no canvas, pelo visualizador ou pela seção "Em desenvolvimento" da tela inicial.
+- **Marcar:** `F` favorita · `A` aprova · `D` descarta (com seleção, ou no visualizador).
+- **Ir para as aprovadas:** botão ✓ no topo ou `⌘A`. Recolhe tudo o que não leva a uma imagem aprovada e enquadra o resultado. É uma ação comum: as pílulas escuras mostram quantos nós ficaram escondidos em cada ponto, e clicar nelas mostra de novo. `⌘Z` desfaz e "Expandir tudo" abre tudo.
+- **Níveis:** `⌘1` / `⌘2` / `⌘3` (ou só `1` / `2` / `3`, ou o botão de árvore no topo). Cada nível é uma geração de imagens, e o pedido conta junto com as imagens que gera: 1 = as primeiras imagens (o que sai delas fica recolhido) · 2 = + os pedidos que saíram delas e as imagens desses · 3 = a geração seguinte. O resto fica recolhido. `⌘Z` desfaz.
+- **Visualizador:** duplo clique na imagem. Clique num ponto para comentar ali; `←`/`→` navegam entre as irmãs. No painel aparecem "Veio de" (as imagens/referências que geraram esta) e "Saiu daqui" (os pedidos e imagens que saíram dela), todos clicáveis. Clicar fora da imagem volta ao canvas.
+- **Apagar:** `⌫`, "Apagar…" no botão direito ou a lixeirinha. Sempre pede confirmação e leva junto o galho inteiro que saiu do nó (o brief não sai). Vai para a lixeira do projeto, e o `⌘Z` traz tudo de volta.
+- **Códigos:** clique no código (ex. `JAR-042`) para copiar e citar no chat.
+- **Navegar:** a roda do mouse dá zoom e arrastar no vazio move o canvas. **Selecionar:** `⌘` + arrastar desenha a caixa de seleção (de qualquer ponto, inclusive em cima de imagens; com `⇧` soma à seleção atual), e `⌘` + clique põe ou tira um nó da seleção.
+- **Botão direito:** no vazio, "Novo pedido aqui" (nasce no ponto clicado), colar imagem, referência do computador e nova tela. Em cima de um nó, as ações dele (pedido a partir dele, marcar, recolher, copiar código, apagar).
+- **Desfazer:** `⌘Z` desfaz e `⌘⇧Z` refaz posições, galhos, marcações, entradas, pedidos criados e itens apagados. Dentro de um campo de texto, o `⌘Z` é o do próprio texto.
+- **Árvore:** cada pedido nasce da imagem de onde saiu e o canvas se arranja sozinho. Arraste qualquer nó para ajustar (o galho vai junto); o botão de grade no topo abre a organização: **Empilhado** (todos os filhos numa coluna) ou **Árvore em grade** (filhos sem galho em colunas de 3 ao lado do pai, para ocupar a largura), além de Realinhar e Expandir tudo. **Grade 3×3, 4×4 e 5×5** (em todo nível, inclusive o 1º, os filhos vão em colunas de 3, 4 ou 5, cada um com o bloco do seu galho). O modo fica salvo por projeto. A pílula à direita de um nó recolhe ou expande o galho.

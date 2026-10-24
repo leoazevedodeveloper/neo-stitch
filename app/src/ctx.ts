@@ -1,0 +1,31 @@
+import { createContext, useContext } from 'react'
+import type { EstadoProjeto, No } from './api'
+import type { Arvore } from './layout'
+
+export type Ctx = {
+  slug: string
+  estado: EstadoProjeto
+  porId: Map<string, No>
+  arv: Arvore
+  alternar: (id: string) => void
+  mudar: (id: string, campos: Partial<No>) => Promise<void>
+  apagar: (id: string) => Promise<void>
+  acao: <T>(fn: () => Promise<T>) => Promise<T | undefined>
+  abrir: (id: string) => void
+  painel: (aba: 'brief' | 'diario') => void
+  novoPedido: (entradas: string[], tela?: string, extra?: Partial<No>) => Promise<No | undefined>
+  pedidoVideo: (imagem: string) => Promise<No | undefined>
+  novaTela: () => Promise<unknown>
+  enviar: (id: string) => Promise<void>
+  copiar: (texto: string) => void
+  focar: string | null
+  limparFoco: () => void
+}
+
+export const CanvasCtx = createContext<Ctx | null>(null)
+
+export function useCanvas(): Ctx {
+  const c = useContext(CanvasCtx)
+  if (!c) throw new Error('fora do canvas')
+  return c
+}

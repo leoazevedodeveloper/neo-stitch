@@ -1,0 +1,8 @@
+projects/
+fila.jsonl
+.ouvinte
+.env
+__pycache__/
+app/node_modules/
+app/dist/
+.DS_Store
