@@ -556,3 +556,20 @@ span.chip { cursor: default; }
   .fogo-foco figure { max-width: 100%; }
 }
 .secundario-ico.fogo { color: var(--fogo); text-decoration: none; }
+
+/* ---------- pedido como ponto na linha (modo "pontos") ---------- */
+.no.pedido-ponto { width: 26px; height: 26px; border-radius: 50%; padding: 0; display: grid; place-items: center; border-color: var(--linha-forte); }
+.pedido-ponto .ponto {
+  display: grid; place-items: center; width: 100%; height: 100%; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: var(--acento); cursor: pointer;
+}
+.pedido-ponto.video .ponto { color: #6a55e0; }
+.pedido-ponto:hover, .pedido-ponto.aberto { border-color: var(--acento); box-shadow: 0 0 0 4px rgba(61, 90, 254, 0.12), var(--sombra); }
+.pedido-ponto .galho { right: -40px; }
+.pedido-ponto .alca.react-flow__handle { opacity: 0; }
+/* o card abre embaixo do ponto, por cima de tudo; o padding é a ponte para o mouse não "cair" no vão */
+.pedido-pop { position: absolute; top: 100%; left: 50%; translate: -50% 0; padding-top: 10px; z-index: 10; cursor: default; animation: pop-entra 0.12s ease-out; }
+.pedido-pop > .no { box-shadow: var(--sombra-alta); }
+.pedido-pop > .no > .codigo { opacity: 1; }
+.react-flow__node:has(.pedido-ponto.aberto) { z-index: 1000 !important; }
+@keyframes pop-entra { from { opacity: 0; transform: translateY(-4px); } }

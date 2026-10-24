@@ -114,6 +114,7 @@ Testamos os 25 modelos de image-to-video do OpenRouter em quatro telas. O que im
 ## Recursos
 
 - **Árvore de ideias** que se arranja sozinha: empilhada, em grade ou em blocos 3×3 / 4×4 / 5×5. Arraste qualquer nó e o galho vai junto.
+- **Pedidos como pontos:** o pedido concluído encolhe num ponto sobre a linha (passe o mouse para ver o card), e a árvore fica só com as imagens.
 - **Recolher com intenção:** cada galho fecha numa pílula com a contagem; `⌘1`/`⌘2`/`⌘3` mostram uma geração de cada vez; `⌘A` deixa só o caminho até as aprovadas.
 - **Visualizador** com comentários em pontos da imagem (ou em segundos do vídeo), "Veio de" / "Saiu daqui" e um filme estilo Finder com as irmãs.
 - **Pedidos de vídeo** com vários modelos, duração, resolução e estimativa de custo antes de enviar.

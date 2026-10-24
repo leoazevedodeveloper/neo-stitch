@@ -19,6 +19,7 @@ export type Ctx = {
   enviar: (id: string) => Promise<void>
   copiar: (texto: string) => void
   focar: string | null
+  pontos: boolean  // pedidos concluídos como pontos na linha
   limparFoco: () => void
 }
 

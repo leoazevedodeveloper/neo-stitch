@@ -7,7 +7,7 @@ import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
 import { api, arquivoUrl, dinheiro, rotaFogo, type ModeloVideo, type No } from './api'
 import { useCanvas } from './ctx'
 import { ESTADOS, alternarEstado } from './estados'
-import { LARG, descendentes, medidaImagem, ocultosSob, razaoDe } from './layout'
+import { LARG, descendentes, ehPonto, medidaImagem, ocultosSob, razaoDe } from './layout'
 
 export type NoRF = Node<{ no: No }>
 
@@ -205,12 +205,17 @@ function Seletor({ valor, opcoes, titulo, onChange }: {
   )
 }
 
-export const PedidoNode = memo(function PedidoNode({ id, data, selected }: NodeProps<NoRF>) {
+/** Pedido: card inteiro — ou, no modo "pontos", o concluído vira um ponto na linha que abre o card no hover/clique. */
+export const PedidoNode = memo(function PedidoNode(props: NodeProps<NoRF>) {
+  const { pontos } = useCanvas()
+  return pontos && ehPonto(props.data.no) ? <PedidoPonto {...props} /> : <PedidoCheio {...props} />
+})
+
+function PedidoCheio({ id, data, selected }: NodeProps<NoRF>) {
   const { no } = data
   const { estado, mudar, apagar, enviar, focar, limparFoco } = useCanvas()
   const rascunho = no.status === 'rascunho'
   const [texto, setTexto] = useState(no.intencao || '')
-  const [verPrompt, setVerPrompt] = useState(false)
   const ref = useRef<HTMLTextAreaElement>(null)
   const tempo = useRef<number>(0)
 
@@ -245,7 +250,6 @@ export const PedidoNode = memo(function PedidoNode({ id, data, selected }: NodeP
   const modelos = Object.entries(estado.modelos).map(([v, m]) => ({ v, r: m.nome }))
   const qtd = no.quantidade || 3
   const variacoes = no.variacoes || []
-  const prompts = variacoes.filter((v) => v.prompt)
   // comum aos rascunhos de imagem e de vídeo: o campo da intenção e o fim da barra (literal · apagar · enviar)
   const campo = (placeholder: string) => (
     <textarea ref={ref} className="nodrag nowheel intencao" value={texto} rows={2} placeholder={placeholder}
@@ -302,39 +306,81 @@ export const PedidoNode = memo(function PedidoNode({ id, data, selected }: NodeP
             {fimBarra('O Claude reescreve como prompt completo')}
           </div>
         </>
-      ) : (
-        <>
-          {no.intencao && <p className="intencao-lida">{no.intencao}</p>}
-          {verPrompt && (
-            <div className="prompts nodrag nowheel">
-              {prompts.length ? prompts.map((v, i) => (
-                <div key={i}>{v.nome && <b>{v.nome}</b>}<p>{v.prompt}</p></div>
-              )) : <p className="mudo">Sem prompt registrado.</p>}
-            </div>
-          )}
-          <div className="pedido-barra lida">
-            <StatusPedido no={no} />
-            <span className="cresce" />
-            {no.legado && <span className="selo" title="Importado: gerado antes do Neo Stitch"><Archive size={12} /></span>}
-            {(prompts.length > 0 || no.status === 'concluido') && (
-              <Botao titulo={verPrompt ? 'Esconder prompts' : 'Ver os prompts usados'} className={verPrompt ? 'on' : ''} onClick={() => setVerPrompt(!verPrompt)}>
-                <Quote size={14} />
-              </Botao>
-            )}
-            {no.status === 'erro' && (
-              <Botao titulo="Tentar de novo" onClick={() => enviar(no.id)}><RotateCw size={14} /></Botao>
-            )}
-            <BotaoGalho no={no} />
-          </div>
-        </>
-      )}
+      ) : <PedidoLido no={no} />}
       <Codigo id={no.id} />
       <Galho no={no} />
       <Alcas />
     </div>
   )
-})
+}
 
+/** O pedido já enviado: a intenção, o status e os prompts usados (no card inteiro e no card que abre do ponto). */
+function PedidoLido({ no }: { no: No }) {
+  const { enviar } = useCanvas()
+  const [verPrompt, setVerPrompt] = useState(false)
+  const prompts = (no.variacoes || []).filter((v) => v.prompt)
+  return (
+    <>
+      {no.intencao && <p className="intencao-lida">{no.intencao}</p>}
+      {verPrompt && (
+        <div className="prompts nodrag nowheel">
+          {prompts.length ? prompts.map((v, i) => (
+            <div key={i}>{v.nome && <b>{v.nome}</b>}<p>{v.prompt}</p></div>
+          )) : <p className="mudo">Sem prompt registrado.</p>}
+        </div>
+      )}
+      <div className="pedido-barra lida">
+        <StatusPedido no={no} />
+        <span className="cresce" />
+        {no.legado && <span className="selo" title="Importado: gerado antes do Neo Stitch"><Archive size={12} /></span>}
+        {(prompts.length > 0 || no.status === 'concluido') && (
+          <Botao titulo={verPrompt ? 'Esconder prompts' : 'Ver os prompts usados'} className={verPrompt ? 'on' : ''} onClick={() => setVerPrompt(!verPrompt)}>
+            <Quote size={14} />
+          </Botao>
+        )}
+        {no.status === 'erro' && (
+          <Botao titulo="Tentar de novo" onClick={() => enviar(no.id)}><RotateCw size={14} /></Botao>
+        )}
+        <BotaoGalho no={no} />
+      </div>
+    </>
+  )
+}
+
+/** O pedido concluído como um ponto na linha entre a imagem de origem e as que saíram dele.
+ *  Mouse em cima abre o card por cima do canvas; clicar deixa aberto (outro clique fecha). */
+function PedidoPonto({ data, selected }: NodeProps<NoRF>) {
+  const { no } = data
+  const { arv } = useCanvas()
+  const [fixo, setFixo] = useState(false)
+  const [sobre, setSobre] = useState(false)
+  const fechar = useRef(0)
+  const entra = () => { window.clearTimeout(fechar.current); setSobre(true) }
+  const sai = () => { fechar.current = window.setTimeout(() => setSobre(false), 160) }
+  const aberto = fixo || sobre
+  const video = no.midia === 'video'
+  return (
+    <div className={`no pedido-ponto ${video ? 'video' : ''} ${aberto ? 'aberto' : ''} ${selected ? 'sel' : ''}`}
+      onMouseEnter={entra} onMouseLeave={sai}>
+      <button type="button" className="ponto nodrag" title={no.intencao || no.id} aria-expanded={aberto}
+        onClick={(e) => { e.stopPropagation(); setFixo(!fixo) }} onDoubleClick={(e) => e.stopPropagation()}>
+        {video ? <Clapperboard size={11} /> : <Sparkles size={11} />}
+      </button>
+      {aberto && (
+        <div className="pedido-pop" onClick={(e) => e.stopPropagation()} onDoubleClick={(e) => e.stopPropagation()}>
+          <div className={`no pedido st-${no.status} ${video ? 'pedido-video' : ''}`} style={{ width: LARG.pedido }}>
+            {video && <span className="selo-midia" title="Pedido de vídeo"><Clapperboard size={12} /> vídeo</span>}
+            <Entradas no={no} editavel={false} />
+            <PedidoLido no={no} />
+            <Codigo id={no.id} />
+          </div>
+        </div>
+      )}
+      {ocultosSob(arv, no) > 0 && <Galho no={no} />}
+      <Alcas />
+    </div>
+  )
+}
 /** Estimativa do pedido de vídeo: o custo medido de 6 s de cada modelo, proporcional à duração que ele de fato faz
  *  (a suportada mais próxima: os Hailuo não descem de 5 s) · 1080p ≈ ×1,6. */
 function custoVideo(no: No, cat: Record<string, ModeloVideo>) {

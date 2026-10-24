@@ -17,7 +17,12 @@ export function razaoDe(aspecto?: string): number {
   return a && b ? a / b : 16 / 9
 }
 
-export function medida(no: No): { w: number; h: number } {
+/** No modo "pontos", o pedido concluído vira um ponto na linha (rascunho, fila e erro continuam como card). */
+export const ehPonto = (no: No) => no.tipo === 'pedido' && no.status === 'concluido'
+export const PONTO = 26
+
+export function medida(no: No, pontos = false): { w: number; h: number } {
+  if (pontos && ehPonto(no)) return { w: PONTO, h: PONTO }
   if (no.tipo === 'imagem' || no.tipo === 'referencia' || no.tipo === 'video') return medidaImagem(no)
   if (no.tipo === 'brief') return { w: LARG.brief, h: 200 }
   if (no.tipo === 'tela') return { w: LARG.tela, h: 48 }
@@ -135,9 +140,13 @@ const GAP_COL = 36
  * Galhos recolhidos somem; `oculto` esconde folhas (ex.: descartadas sem filhos). Referências soltas ficam onde estão.
  */
 export function layoutArvore(nos: No[], a: Arvore, medidas: Map<string, { w: number; h: number }>, oculto: (n: No) => boolean,
-  modo: ModoLayout = 'pilha') {
+  modo: ModoLayout = 'pilha', pontos = false) {
   const porId = new Map(nos.map((n) => [n.id, n]))
-  const m = (id: string) => medidas.get(id) || medida(porId.get(id)!)
+  // o ponto tem tamanho fixo (a medida guardada pode ser a do card, de antes de virar ponto)
+  const m = (id: string) => {
+    const n = porId.get(id)!
+    return pontos && ehPonto(n) ? medida(n, true) : medidas.get(id) || medida(n)
+  }
   // recolhido: o galho inteiro fecha · escondidos: só esses filhos somem (o "só aprovados" usa isso)
   const visiveisDe = (id: string) => {
     const no = porId.get(id)

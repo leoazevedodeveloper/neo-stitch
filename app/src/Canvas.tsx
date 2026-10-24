@@ -4,14 +4,14 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import {
-  ArrowUp, BadgeCheck, BookOpen, Clapperboard, ListTree, Check, ChevronLeft, ChevronRight, ClipboardPaste, Copy, Eye, EyeOff, FileText, GitBranchPlus, ImagePlus,
+  ArrowUp, BadgeCheck, BookOpen, CircleDot, Clapperboard, ListTree, Check, ChevronLeft, ChevronRight, ClipboardPaste, Copy, Eye, EyeOff, FileText, GitBranchPlus, ImagePlus,
   LayoutGrid, Maximize, Maximize2, Monitor, Star, Trash2, UnfoldHorizontal, X,
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, arquivoUrl, dinheiro, type Estado, type No } from './api'
 import { CanvasCtx, type Ctx } from './ctx'
 import { TrilhoFogo } from './Fogo'
-import { arestas, arvore, caminhoAprovadas, descendentes, galhoCompleto, layoutArvore, medida, ocultosSob, type ModoLayout } from './layout'
+import { arestas, arvore, caminhoAprovadas, descendentes, ehPonto, galhoCompleto, layoutArvore, medida, ocultosSob, type ModoLayout } from './layout'
 import { Menu, type ItemMenu } from './Menu'
 import { nodeTypes, type NoRF } from './nodes'
 import { Painel } from './Painel'
@@ -35,6 +35,7 @@ function CanvasInterno({ slug }: { slug: string }) {
   const [visto, setVisto] = useState<string | null>(null)
   const [aba, setAba] = useState<'brief' | 'diario' | null>(null)
   const [esconder, setEsconder] = useState(() => localStorage.getItem('neo:esconder') === '1')
+  const [pontos, setPontos] = useState(() => localStorage.getItem('neo:pontos') !== '0')  // padrão: ligado
   const [focar, setFocar] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [selecionando, setSelecionando] = useState(false)
@@ -89,8 +90,8 @@ function CanvasInterno({ slug }: { slug: string }) {
 
   // a árvore se arranja sozinha (galhos recolhidos somem); só referências soltas guardam posição
   const posicoesArvore = useMemo(
-    () => layoutArvore(nos, arv, medidas, (n) => esconder && n.tipo === 'imagem' && n.estado === 'descartada', modo),
-    [nos, arv, medidas, esconder, modo],
+    () => layoutArvore(nos, arv, medidas, (n) => esconder && n.tipo === 'imagem' && n.estado === 'descartada', modo, pontos),
+    [nos, arv, medidas, esconder, modo, pontos],
   )
   // o ajuste manual (arrastar) é um deslocamento sobre a posição automática, herdado por todo o galho
   const posicoesFinais = useMemo(() => {
@@ -448,7 +449,8 @@ function CanvasInterno({ slug }: { slug: string }) {
     let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
     for (const id of lista) {
       const p = posicoesFinais[id]
-      const m = medidas.get(id) || medida(porId.get(id)!)
+      const n = porId.get(id)!
+      const m = pontos && ehPonto(n) ? medida(n, true) : medidas.get(id) || medida(n)
       x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x + m.w); y1 = Math.max(y1, p.y + m.h)
     }
     const W = window.innerWidth
@@ -456,7 +458,7 @@ function CanvasInterno({ slug }: { slug: string }) {
     const f = o.folga ?? 0.1
     const zoom = Math.min(o.max ?? 1.2, Math.max(o.min ?? 0.05, Math.min((W * (1 - 2 * f)) / (x1 - x0), (H * (1 - 2 * f)) / (y1 - y0))))
     rf.setViewport({ x: W / 2 - ((x0 + x1) / 2) * zoom, y: H / 2 - ((y0 + y1) / 2) * zoom, zoom }, { duration: o.dur ?? 450 })
-  }, [posicoesFinais, porId, medidas, rf])
+  }, [posicoesFinais, porId, medidas, rf, pontos])
   const enquadrado = useRef(false)
   useEffect(() => {
     if (enquadrado.current || !nodes.length) return
@@ -594,9 +596,9 @@ function CanvasInterno({ slug }: { slug: string }) {
   const ctx: Ctx | null = useMemo(
     () => estado && {
       slug, estado, porId, arv, alternar, mudar, apagar: (id: string) => apagar(id), acao, abrir: setVisto, painel: setAba, novoPedido, pedidoVideo,
-      novaTela, enviar, copiar, focar, limparFoco: () => setFocar(null),
+      novaTela, enviar, copiar, focar, limparFoco: () => setFocar(null), pontos,
     },
-    [slug, estado, porId, arv, alternar, mudar, apagar, acao, novoPedido, pedidoVideo, novaTela, enviar, copiar, focar],
+    [slug, estado, porId, arv, alternar, mudar, apagar, acao, novoPedido, pedidoVideo, novaTela, enviar, copiar, focar, pontos],
   )
 
   if (!estado || !ctx) {
@@ -667,6 +669,11 @@ function CanvasInterno({ slug }: { slug: string }) {
           <button type="button" className={`ico ${esconder ? 'on' : ''}`} title={esconder ? 'Mostrar descartadas' : 'Esconder descartadas'}
             onClick={() => { setEsconder(!esconder); localStorage.setItem('neo:esconder', esconder ? '0' : '1') }}>
             {esconder ? <EyeOff size={16} /> : <Eye size={16} />}
+          </button>
+          <button type="button" className={`ico ${pontos ? 'on' : ''}`}
+            title={pontos ? 'Pedidos concluídos como pontos na linha (passe o mouse para ver) — clique para mostrar os cards' : 'Mostrar os pedidos concluídos como pontos na linha'}
+            onClick={() => { setPontos(!pontos); localStorage.setItem('neo:pontos', pontos ? '0' : '1') }}>
+            <CircleDot size={16} />
           </button>
           <div className="organizar">
             <button type="button" className={`ico ${niveis ? 'on' : ''}`} title="Recolher por nível (⌘1 · ⌘2 · ⌘3)" onClick={() => setNiveis(!niveis)}>
