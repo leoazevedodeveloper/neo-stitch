@@ -30,16 +30,19 @@ RAIZ = Path(__file__).resolve().parent.parent
 PROJETOS = RAIZ / 'projects'
 FILA = RAIZ / 'fila.jsonl'
 
-TIPOS_NO = ('brief', 'tela', 'pedido', 'imagem', 'referencia', 'video')
+TIPOS_NO = ('brief', 'tela', 'pedido', 'imagem', 'referencia', 'video', 'modelo')
 ESTADOS = ('neutra', 'favorita', 'aprovada', 'descartada')
 MODELOS = {
     'openai/gpt-image-2': {'nome': 'GPT Image 2', 'preco': 0.14},
+    'openai/gpt-image-2.5-sunburst': {'nome': 'GPT Image 2.5 Sunburst', 'preco': 0.14},
+    'openai/gpt-image-2.5-flare': {'nome': 'GPT Image 2.5 Flare', 'preco': 0.14},
     'google/gemini-3-pro-image': {'nome': 'Nano Banana Pro', 'preco': 0.14},
     'google/gemini-3.1-flash-image': {'nome': 'Nano Banana Flash', 'preco': 0.04},
     'bytedance-seed/seedream-5-0-pro': {'nome': 'Seedream 5 Pro', 'preco': 0.05},
     'black-forest-labs/flux.2-pro': {'nome': 'Flux 2 Pro', 'preco': 0.05},
 }
-ALIASES = {'gpt': 'openai/gpt-image-2', 'gpt2': 'openai/gpt-image-2', 'pro': 'google/gemini-3-pro-image',
+ALIASES = {'gpt': 'openai/gpt-image-2', 'gpt2': 'openai/gpt-image-2', 'sunburst': 'openai/gpt-image-2.5-sunburst',
+           'flare': 'openai/gpt-image-2.5-flare', 'pro': 'google/gemini-3-pro-image',
            'flash': 'google/gemini-3.1-flash-image', 'seedream': 'bytedance-seed/seedream-5-0-pro',
            'flux': 'black-forest-labs/flux.2-pro'}
 ASPECTOS = ('16:9', '9:16', '4:3', '3:4', '1:1', '21:9', '2:3', '3:2')
@@ -59,7 +62,7 @@ VIDEO_NO_APP = {
     'minimax/hailuo-3': '',
     'bytedance/seedance-2.5': 'poderoso e caro',
 }
-SUBPASTAS = ('nodes', 'images', 'thumbs', 'refs', 'videos')
+SUBPASTAS = ('nodes', 'images', 'thumbs', 'refs', 'videos', 'models')
 LAYOUTS = ('pilha', 'grade', 'grade3', 'grade4', 'grade5')
 CODIGO = re.compile(r'\b([A-Z]{2,5})-(\d{3,})\b')
 CATALOGO_VIDEO = Path(__file__).parent / 'dados' / 'modelos_video.json'
@@ -265,9 +268,11 @@ def rev(slug: str) -> str:
     """Muda sempre que algum arquivo do projeto que o app mostra muda (o app só recarrega quando muda)."""
     d = pasta(slug)
     marcas = []
-    for f in [d / 'projeto.json', d / 'brief.md', d / 'diario.md', *sorted((d / 'nodes').glob('*.json'))]:
+    # impl/: uma versão nova muda a pasta da imagem; impl.json (ou origem.json) diz quem faz, de qual vídeo e em que pé está
+    impl = [*sorted((d / 'impl').glob('*')), *sorted((d / 'impl').glob('*/*/impl.json')), *sorted((d / 'impl').glob('*/*/origem.json'))]
+    for f in [d / 'projeto.json', d / 'brief.md', d / 'diario.md', *sorted((d / 'nodes').glob('*.json')), *impl]:
         try:
-            marcas.append(f'{f.name}:{f.stat().st_mtime_ns}')
+            marcas.append(f'{f.relative_to(d)}:{f.stat().st_mtime_ns}')
         except FileNotFoundError:
             pass
     marcas.append(f'ouvinte:{ouvinte_vivo()}')
@@ -301,10 +306,12 @@ def custos(slug: str, lista: list[dict] | None = None) -> dict:
 # ---------- avanços ("fogo": a imagem virou algo maior — vídeo, tentativas de HTML) ----------
 
 def avancos(slug: str, lista: list[dict] | None = None) -> dict:
-    """{código da imagem: {videos: [códigos], impl: [versões]}} — só as imagens que já avançaram.
+    """{código da imagem: {videos: [códigos], impl: [versões], origens: {versão: vídeo}}} — só as imagens que já avançaram.
 
     Vídeo conta quando sai de um pedido de vídeo cuja 1ª entrada é a imagem (e não deu erro); `impl` são as pastas
-    projects/<slug>/impl/<código>/vN/ (as tentativas de img-to-html).
+    projects/<slug>/impl/<código>/vN/ (as tentativas de HTML). Cada versão traz `impl.json` (docs/AGENTES.md: agente, vídeo,
+    status, etapa, progresso; vai em `trabalhos`) ou, nas antigas, só `origem.json` com {"video"}. Com vídeo, a versão
+    deriva do vídeo, não da imagem (img-to-html não tem origem).
     """
     lista = lista if lista is not None else nos(slug)
     por_id = {n['id']: n for n in lista}
@@ -317,14 +324,37 @@ def avancos(slug: str, lista: list[dict] | None = None) -> dict:
             continue
         vids = [v for v in p.get('saidas') or [] if por_id.get(v, {}).get('tipo') == 'video' and not por_id[v].get('erro')]
         if vids:
-            out.setdefault(img, {'videos': [], 'impl': []})['videos'] += vids
+            out.setdefault(img, novo_avanco())['videos'] += vids
     impl = pasta(slug) / 'impl'
     if impl.is_dir():
         for d in sorted(impl.iterdir()):
-            versoes = sorted(v.name for v in d.iterdir() if v.is_dir()) if d.is_dir() else []
+            versoes = sorted((v.name for v in d.iterdir() if v.is_dir()), key=ordem_versao) if d.is_dir() else []
             if d.name in por_id and versoes:
-                out.setdefault(d.name, {'videos': [], 'impl': []})['impl'] = versoes
+                a = out.setdefault(d.name, novo_avanco())
+                a['impl'] = versoes
+                for v in versoes:
+                    ficha = ler_json(d / v / 'impl.json', None) or ler_json(d / v / 'origem.json', None) or {}
+                    if ficha.get('video') in a['videos']:
+                        a['origens'][v] = ficha['video']
+                    if ficha.get('agente'):
+                        a['trabalhos'][v] = {k: ficha.get(k) for k in TRABALHO}
     return out
+
+
+def novo_avanco() -> dict:
+    return {'videos': [], 'impl': [], 'origens': {}, 'trabalhos': {}}
+
+
+# o que o app mostra de impl.json (o contrato completo em docs/AGENTES.md); base/pedido: evolução (v1 → v1.1);
+# entradas: as imagens tiradas do vídeo de onde a versão parte (ex.: a estática e a viva);
+# estado: a aprovação do usuário (só o app escreve)
+TRABALHO = ('agente', 'status', 'etapa', 'progresso', 'inicio', 'atualizado', 'fim', 'nota', 'erro', 'base', 'pedido', 'estado', 'entradas')
+
+
+def ordem_versao(nome: str) -> tuple:
+    """'v1' < 'v1.1' < 'v1.2' < 'v1.10' < 'v2' (os nomes que não seguem vN[.M] vão para o fim)."""
+    m = re.fullmatch(r'v(\d+)(?:\.(\d+))?', nome)
+    return (0, int(m.group(1)), int(m.group(2) or 0)) if m else (1, 0, 0, nome)
 
 
 # ---------- fila (o Claude observa com tail -F) ----------

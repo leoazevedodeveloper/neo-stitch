@@ -11,6 +11,7 @@
     uv run ferramentas/neo.py direcoes <BRIEF> --json '[{"nome": "…", "tese": "…"}]'
     uv run ferramentas/neo.py tela <slug> "Nome"
     uv run ferramentas/neo.py pedido <slug> [--tela COD] [--entradas A,B] [--intencao "…"] [--quantidade N] [--enviar]
+                                       [--midia video --modelos a,b --duracao 6 --resolucao 720p]   (pedido de vídeo de uma imagem)
     uv run ferramentas/neo.py comentar <CÓDIGO> "texto" [--pin x,y]      (x,y de 0 a 1 sobre a imagem)
     uv run ferramentas/neo.py estado <CÓDIGO…> neutra|favorita|aprovada|descartada
     uv run ferramentas/neo.py erro <CÓDIGO> "mensagem"         devolve o pedido com erro (volta a ser editável)
@@ -163,11 +164,19 @@ def cmd_pedido(a):
         campos = {'tela': tela, 'entradas': entradas, 'intencao': a.intencao or ''}
         if a.quantidade:
             campos['quantidade'] = a.quantidade
+        if a.midia == 'video':   # vídeo de uma imagem: a 1ª entrada é o quadro inicial; um vídeo por modelo
+            campos['midia'] = 'video'
+            if a.modelos:
+                campos['modelos'] = [m.strip() for m in a.modelos.split(',') if m.strip()]
+            if a.duracao:
+                campos['duracao'] = a.duracao
+            if a.resolucao:
+                campos['resolucao'] = a.resolucao
         if a.enviar:
             campos.update(status='enviado', enviado_em=B.agora())
         no = B.novo_no(a.slug, 'pedido', **campos)
     if a.enviar:
-        B.enfileirar(a.slug, no['id'], 'gerar')
+        B.enfileirar(a.slug, no['id'], 'video' if a.midia == 'video' else 'gerar')
     print(no['id'])
 
 
@@ -227,6 +236,8 @@ def main():
     s = sub.add_parser('tela'); s.add_argument('slug'); s.add_argument('nome'); s.set_defaults(fn=cmd_tela)
     s = sub.add_parser('pedido'); s.add_argument('slug'); s.add_argument('--tela'); s.add_argument('--entradas')
     s.add_argument('--intencao'); s.add_argument('--quantidade', type=int); s.add_argument('--enviar', action='store_true')
+    s.add_argument('--midia', choices=['imagem', 'video'], default='imagem'); s.add_argument('--modelos')
+    s.add_argument('--duracao', type=int); s.add_argument('--resolucao')
     s.set_defaults(fn=cmd_pedido)
     s = sub.add_parser('comentar'); s.add_argument('codigo'); s.add_argument('texto'); s.add_argument('--pin')
     s.set_defaults(fn=cmd_comentar)

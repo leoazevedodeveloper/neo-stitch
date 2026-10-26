@@ -190,7 +190,7 @@ app/src/              Vite + React 19 + React Flow 12
   Canvas.tsx          o canvas: árvore, atalhos, seleção, menu, organização
   nodes.tsx           os nós: brief, tela, pedido, imagem, referência, vídeo
   Viewer.tsx          o visualizador com pins e linhagem
-  Fogo.tsx            a página 🔥 de cada imagem em desenvolvimento
+  Fogo.tsx            a página 🔥 de cada imagem (canvas imagem → vídeos e sites) e a barra fogo/aprovadas
   layout.ts           a árvore e os modos de arranjo
 projects/<slug>/      os dados (um JSON por nó, imagens, vídeos, impl/) — fora do git
 .claude/skills/       a skill que ensina o Claude a operar o canvas
@@ -200,8 +200,9 @@ Decisões e escopo completos em [specs.md](specs.md).
 
 ## Próximos passos
 
-- [ ] O HTML dentro do app: as versões de `impl/<código>/vN` na página 🔥, lado a lado com a imagem e o vídeo.
-- [ ] Do vídeo ao HTML animado: usar o vídeo aprovado como referência de movimento na reconstrução.
+- [x] O HTML dentro do app: as versões de `impl/<código>/vN` na página 🔥, lado a lado com a imagem e o vídeo.
+- [x] Do vídeo ao HTML animado: a skill `video2html` usa o vídeo aprovado como referência de movimento na reconstrução.
+- [ ] Pedir o HTML pelo app (um botão na página 🔥 que vira uma ação da fila).
 - [ ] Editar padrões e tetos do projeto pela interface.
 
 <br>

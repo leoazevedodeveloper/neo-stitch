@@ -164,4 +164,9 @@ Esse pacote é o ponto de partida para o Claude da outra pasta implementar front
 
 **Fogo (2026-10-23):** imagem que avançou (vídeo, ou pasta `impl/<código>/vN/`) é calculada no servidor (`base.avancos`), ganha selo de fogo, conta como ativa no ⌘A e vira uma entrada à parte: seção "Em desenvolvimento" na Home, barra à esquerda no canvas e página própria `#/p/<slug>/f/<código>` (por ora: a imagem + os vídeos). As tentativas de HTML entram nessa página depois.
 
+**video2html (2026-10-24):** skill global `~/.agents/skills/video2html` (imagem aprovada + vídeo → HTML vivo e interativo). Lê o
+movimento (mapa de pixels + Gemini 3.8 Flash), escreve o mapa de vida (`vida.md`), reconstrói em camadas (img-to-html) e anima em
+código (CSS/SVG → Canvas → Three.js, GSAP) — vídeo nunca vira asset. Protótipo: `impl/JAR-095/v1` (do vídeo JAR-154); validação:
+`impl/JAR-115/v1` (do JAR-170). A página 🔥 mostra as versões de `impl/` rodando.
+
 **Fica para depois:** UI para editar padrões/tetos do projeto (só via API/`projeto.json`), v2 (implementações).

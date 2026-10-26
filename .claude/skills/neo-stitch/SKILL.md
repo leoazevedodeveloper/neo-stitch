@@ -77,7 +77,20 @@ O pedido nasce no canvas e mantém a linhagem. Projeto novo pelo chat: `neo.py n
 - Ver o projeto inteiro: `neo.py ver <slug>`, uma árvore compacta com estados e comentários.
 - Brief: `neo.py brief <slug>` lê; `--arquivo novo.md` troca.
 
-## 6. Ainda não implementado (v2)
+## 6. Implementações (HTML)
+
+Imagem → HTML estático: skill `img-to-html`. Imagem + vídeo aprovado → HTML vivo e interativo: skill `video2html`
+(`/video2html JAR-154`). As duas gravam em `projects/<slug>/impl/<código da imagem>/vN/`, e a página 🔥 da imagem mostra as versões.
+
+Outros agentes (Codex, OpenCode…) também implementam vídeos: a spec é `docs/AGENTES.md`. Toda versão, inclusive as do Claude, é
+reservada e reportada com `uv run ferramentas/impl.py iniciar <VÍDEO> --agente "Claude Opus 5.5"` · `etapa <IMG/vN> "…" --progresso 0.x`
+· `pronto <IMG/vN>`. O `impl.json` que isso escreve é o que o app mostra (agente, etapa, progresso, "parado?").
+**Imagens e modelos 3D gerados no trabalho são cartões:** `impl.py asset <IMG/vN> <arquivo.png>` (sai do vídeo) e
+`impl.py asset <IMG/vN> <modelo.glb> --de <imagem> --capa <render.png>` (sai da imagem). Visão geral da linhagem: `AGENTS.md`.
+**Alteração pedida numa versão existente nunca a edita:** `impl.py evoluir <IMG/vN> --agente "…" --pedido "…"` cria a `vN.M`
+(v1 → v1.1 → v1.2), e o usuário aprova no cartão.
+
+### Notas antigas (spec v2)
 
 As implementações (imagem ✅ → HTML vivo com `img-to-html`, depois a fase "Vida" com `animate`) estão especificadas em `specs.md` §8–9. Quando o usuário pedir, siga a spec:
 - abra uma sessão própria por implementação;

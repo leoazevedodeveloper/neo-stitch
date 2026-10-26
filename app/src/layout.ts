@@ -23,7 +23,7 @@ export const PONTO = 26
 
 export function medida(no: No, pontos = false): { w: number; h: number } {
   if (pontos && ehPonto(no)) return { w: PONTO, h: PONTO }
-  if (no.tipo === 'imagem' || no.tipo === 'referencia' || no.tipo === 'video') return medidaImagem(no)
+  if (no.tipo === 'imagem' || no.tipo === 'referencia' || no.tipo === 'video' || no.tipo === 'modelo') return medidaImagem(no)
   if (no.tipo === 'brief') return { w: LARG.brief, h: 200 }
   if (no.tipo === 'tela') return { w: LARG.tela, h: 48 }
   return { w: LARG.pedido, h: no.status === 'rascunho' ? 150 : 96 }
@@ -40,7 +40,7 @@ export type Arvore = {
 
 /**
  * A árvore de ideias: brief → telas → pedidos → imagens → pedidos → imagens…
- * O pai de um pedido é a imagem de onde ele saiu (a 1ª entrada que é imagem); sem imagem, a referência (que então
+ * O pai de um pedido é a imagem de onde ele saiu (a 1ª entrada que é imagem ou vídeo); sem imagem, a referência (que então
  * pende da tela) se ela não tiver posição própria; senão, a tela. As outras entradas viram arestas tracejadas.
  */
 export function arvore(nos: No[]): Arvore {
@@ -55,7 +55,8 @@ export function arvore(nos: No[]): Arvore {
     if (n.tipo === 'tela') ligar(n.id, n.pai || brief?.id)
     if (n.tipo === 'pedido') {
       const ent = (n.entradas || []).map((e) => porId.get(e)).filter(Boolean) as No[]
-      const img = ent.find((e) => e.tipo === 'imagem')
+      // a imagem (ou o vídeo: um pedido pode partir de um quadro dele) de onde o pedido saiu
+      const img = ent.find((e) => e.tipo === 'imagem' || e.tipo === 'video')
       const ref = ent.find((e) => e.tipo === 'referencia')
       // referência com posição própria (colada/arrastada pelo usuário) fica onde está: não vira galho da árvore
       if (img) ligar(n.id, img.id)
@@ -64,7 +65,7 @@ export function arvore(nos: No[]): Arvore {
         ligar(n.id, ref.id)
       } else ligar(n.id, n.tela)
     }
-    if (n.tipo === 'imagem' || n.tipo === 'video') ligar(n.id, n.pedido)
+    if (n.tipo === 'imagem' || n.tipo === 'video' || n.tipo === 'modelo') ligar(n.id, n.pedido)
   }
   const filhos = new Map<string, string[]>()
   for (const n of ordem) {

@@ -9,6 +9,8 @@ Só biblioteca padrão. No desenvolvimento, o Vite (app/, porta 5173) repassa /a
 
 Rotas (JSON; erro volta como {"erro": "…"}):
 - GET  /api/projetos                                  a lista (capa, custos, contagem)
+- GET  /api/spec/agentes                              docs/AGENTES.md (vídeo → HTML por outros agentes) para o app mostrar
+- PATCH /api/projetos/<slug>/impl/<IMG>/<vN[.M]> {estado}   aprova/descarta uma versão de HTML (grava no impl.json)
 - POST /api/projetos {nome, tipo, descricao}           cria (Brief + primeira Tela)
 - GET  /api/projetos/<slug>?rev=…                      {rev, projeto, nos, custos, brief, diario, modelos, modelos_video,
                                                         avancos, …} ou {rev, igual: true} quando nada mudou
@@ -53,6 +55,8 @@ CAMPOS_APP = {
     'referencia': _TODO_NO | {'titulo'},
     'video': _TODO_NO | {'estado'},
 }
+MIDIA = {'.png', '.jpg', '.jpeg', '.webp', '.gif', '.mp4', '.webm', '.bin', '.glb'}
+mimetypes.add_type('model/gltf-binary', '.glb')
 EXTENSOES = {'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif'}
 
 ROTAS: list[tuple[str, re.Pattern, Callable]] = []
@@ -87,6 +91,29 @@ def resumo(slug: str) -> dict:
             'fogos': [{'id': i, 'thumb': f'/projects/{slug}/{por_id[i].get("thumb") or por_id[i]["arquivo"]}',
                        'nome': por_id[i].get('nome') or '', 'videos': len(a['videos']), 'impl': len(a['impl'])}
                       for i, a in B.avancos(slug, lista).items() if por_id[i].get('arquivo')]}
+
+
+@rota('GET', '/api/spec/agentes')
+def spec_agentes(h, m, corpo):
+    """A spec para delegar vídeo → HTML a outros agentes (docs/AGENTES.md), para o app mostrar."""
+    arq = B.RAIZ / 'docs' / 'AGENTES.md'
+    return {'texto': arq.read_text(encoding='utf-8'), 'caminho': str(arq), 'raiz': str(B.RAIZ)}
+
+
+@rota('PATCH', f'/api/projetos/{SLUG}/impl/{ID}/' + r'(v\d+(?:\.\d+)?)')
+def mudar_impl(h, m, corpo):
+    """A aprovação de uma versão de HTML (estado: neutra · aprovada · descartada) no impl.json; o resto é do agente."""
+    slug, img, v = m.groups()
+    if corpo.get('estado') not in B.ESTADOS:
+        raise Erro('estado inválido')
+    with B.travado(slug):
+        f = B.pasta(slug) / 'impl' / img / v / 'impl.json'
+        ficha = B.ler_json(f, None)
+        if ficha is None:
+            raise Erro('Versão sem impl.json.')
+        ficha['estado'] = corpo['estado']
+        B.gravar_json(f, ficha)
+    return ficha
 
 
 @rota('GET', '/api/projetos')
@@ -415,7 +442,8 @@ class Handler(SimpleHTTPRequestHandler):
             alvo = (B.RAIZ / unquote(caminho).lstrip('/')).resolve()
             if not str(alvo).startswith(str(B.PROJETOS.resolve())) or not alvo.is_file():
                 return self.responder(404, {'erro': 'arquivo não encontrado'})
-            return self.arquivo(alvo, cache=True)
+            # mídia gerada não muda (cache longo); o código das implementações (impl/…: html, js, css, json) muda o tempo todo
+            return self.arquivo(alvo, cache=alvo.suffix.lower() in MIDIA)
         # o app compilado (SPA): qualquer outra rota cai no index.html
         alvo = (DIST / unquote(caminho).lstrip('/')).resolve()
         if str(alvo).startswith(str(DIST.resolve())) and alvo.is_file():

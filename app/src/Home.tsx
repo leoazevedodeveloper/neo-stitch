@@ -17,52 +17,71 @@ export function Home() {
     api.projetos().then(setLista).catch(() => setLista([]))
   }, [])
 
-  const fogos = (lista || []).flatMap((p) => (p.fogos || []).map((f) => ({ ...f, slug: p.slug, projeto: p.nome })))
+  // o projeto selecionado (clique) mostra, embaixo, as imagens dele em desenvolvimento; abrir = botão ou duplo clique
+  const [sel, setSel] = useState<string | null>(() => { try { return localStorage.getItem('neo:home-sel') } catch { return null } })
+  const selecionar = (slug: string | null) => {
+    setSel(slug)
+    try { if (slug) localStorage.setItem('neo:home-sel', slug); else localStorage.removeItem('neo:home-sel') } catch { /* sem storage */ }
+  }
+  const atual = lista?.find((p) => p.slug === sel)
+  const abrir = (slug: string) => { location.hash = `#/p/${slug}` }
 
   return (
-    <main className="home">
+    <main className="home" onClick={() => selecionar(null)}>
       <header className="home-topo">
         <img src="/favicon.svg" alt="" width={28} height={28} />
         <h1>Neo Stitch</h1>
       </header>
-      {fogos.length > 0 && (
-        <>
-          <h2 className="home-secao fogo" title="Imagens que já ganharam vídeo ou HTML"><Flame size={15} /> Em desenvolvimento</h2>
-          <section className="grade fogos">
-            {fogos.map((f) => (
-              <a key={`${f.slug}/${f.id}`} className="cartao" href={rotaFogo(f.slug, f.id)}>
-                <div className="capa"><img src={f.thumb} alt="" /><span className="selo-fogo"><Flame size={12} /></span></div>
-                <div className="cartao-info">
-                  <span className="cartao-nome">{f.id}</span>
-                  <span className="mudo">{f.projeto}</span>
-                  <span className="cresce" />
-                  <span className="mudo" title={`${f.videos} vídeo(s)${f.impl ? ` · ${f.impl} HTML` : ''}`}>▶ {f.videos}</span>
-                </div>
-              </a>
-            ))}
-          </section>
-          <h2 className="home-secao">Projetos</h2>
-        </>
-      )}
+      <h2 className="home-secao">Projetos</h2>
       <section className="grade">
-        <button type="button" className="cartao novo" onClick={() => setNovo(true)} title="Novo projeto">
+        <button type="button" className="cartao novo" onClick={(e) => { e.stopPropagation(); setNovo(true) }} title="Novo projeto">
           <Plus size={28} strokeWidth={1.5} />
         </button>
         {lista?.map((p) => {
           const Tipo = TIPOS.find((t) => t.v === p.tipo)?.I || AppWindow
+          const on = p.slug === sel
           return (
-            <a key={p.slug} className="cartao" href={`#/p/${p.slug}`}>
-              <div className="capa">{p.capa ? <img src={p.capa} alt="" /> : <Tipo size={28} strokeWidth={1.3} />}</div>
+            <div key={p.slug} role="button" tabIndex={0} className={`cartao projeto ${on ? 'sel' : ''}`}
+              title={`${p.nome}: clique para ver o que está em desenvolvimento · duplo clique abre`}
+              onClick={(e) => { e.stopPropagation(); selecionar(p.slug) }} onDoubleClick={() => abrir(p.slug)}
+              onKeyDown={(e) => { if (e.key === 'Enter') abrir(p.slug) }}>
+              <div className="capa">
+                {p.capa ? <img src={p.capa} alt="" draggable={false} /> : <Tipo size={28} strokeWidth={1.3} />}
+                {(p.fogos || []).length > 0 && <span className="selo-fogo contagem" title={`${p.fogos!.length} em desenvolvimento`}><Flame size={12} /> {p.fogos!.length}</span>}
+                {on && <button type="button" className="primario abrir" onClick={(e) => { e.stopPropagation(); abrir(p.slug) }} title="Abrir o canvas (↵)">Abrir</button>}
+              </div>
               <div className="cartao-info">
                 <span className="cartao-nome">{p.nome}</span>
                 <span className="prefixo">{p.prefixo}</span>
                 <span className="cresce" />
                 <span className="mudo" title={`${p.imagens} imagens · ${dinheiro(p.custos.total)}`}>{p.imagens}</span>
               </div>
-            </a>
+            </div>
           )
         })}
       </section>
+      {atual && (
+        <div onClick={(e) => e.stopPropagation()}>
+          <h2 className="home-secao fogo" title="Imagens deste projeto que já ganharam vídeo ou HTML">
+            <Flame size={15} /> Em desenvolvimento <span className="mudo">· {atual.nome}</span>
+          </h2>
+          {(atual.fogos || []).length ? (
+            <section className="grade fogos">
+              {atual.fogos!.map((f) => (
+                <a key={f.id} className="cartao" href={rotaFogo(atual.slug, f.id)}>
+                  <div className="capa"><img src={f.thumb} alt="" /><span className="selo-fogo"><Flame size={12} /></span></div>
+                  <div className="cartao-info">
+                    <span className="cartao-nome">{f.id}</span>
+                    <span className="mudo">{f.nome}</span>
+                    <span className="cresce" />
+                    <span className="mudo" title={`${f.videos} vídeo(s)${f.impl ? ` · ${f.impl} HTML` : ''}`}>▶ {f.videos}{f.impl ? ` · </> ${f.impl}` : ''}</span>
+                  </div>
+                </a>
+              ))}
+            </section>
+          ) : <p className="mudo">Nada em desenvolvimento ainda: aprove uma imagem e peça um vídeo dela no canvas.</p>}
+        </div>
+      )}
       {novo && <NovoProjeto fechar={() => setNovo(false)} />}
     </main>
   )

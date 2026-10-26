@@ -1,10 +1,10 @@
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react'
 import {
-  AppWindow, ArrowUp, Check, ChevronDown, Globe, LayoutDashboard, Link2, LoaderCircle, MessageCircle,
+  AppWindow, ArrowUp, Box, Check, ChevronDown, Globe, LayoutDashboard, Link2, LoaderCircle, MessageCircle,
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Clapperboard, Flame, Minus, Play, Plus, Quote, RotateCw, Smartphone, Sparkles, Star, Trash2, TriangleAlert, X, Archive,
 } from 'lucide-react'
 import { memo, useEffect, useRef, useState, type ReactNode } from 'react'
-import { api, arquivoUrl, dinheiro, rotaFogo, type ModeloVideo, type No } from './api'
+import { api, arquivoUrl, dinheiro, rotaFogo, urlModelo, type ModeloVideo, type No } from './api'
 import { useCanvas } from './ctx'
 import { ESTADOS, alternarEstado } from './estados'
 import { LARG, descendentes, ehPonto, medidaImagem, ocultosSob, razaoDe } from './layout'
@@ -568,5 +568,31 @@ export const VideoNode = memo(function VideoNode({ data, selected }: NodeProps<N
   )
 })
 
-export const nodeTypes = { brief: BriefNode, tela: TelaNode, pedido: PedidoNode, imagem: ImagemNode, referencia: RefNode, video: VideoNode }
+/** Um modelo 3D (imagem → 3D): a capa é um render no ângulo do quadro; dois cliques abrem o visualizador 3D. */
+export const ModeloNode = memo(function ModeloNode({ data, selected }: NodeProps<NoRF>) {
+  const { no } = data
+  const { slug } = useCanvas()
+  const { w, h } = medidaImagem(no)
+  const estado = no.estado || 'neutra'
+  return (
+    <div className={`no imagem modelo es-${estado} ${selected ? 'sel' : ''}`} style={{ width: w }}
+      onDoubleClick={() => window.open(urlModelo(slug, no), '_blank', 'noreferrer')} title="Dois cliques abrem o modelo em 3D">
+      <div className="quadro" style={{ height: h }}>
+        <img src={arquivoUrl(slug, no.thumb || '')} alt={no.nome || no.id} draggable={false} />
+        <span className={`marca ${estado === 'aprovada' ? 'ok' : 'play'}`}>{estado === 'aprovada' ? <Check size={12} strokeWidth={3} /> : <Box size={11} />}</span>
+        <div className="acoes"><BotoesEstado no={no} /></div>
+        <div className="rodape">
+          <Codigo id={no.id} />
+          <span className="nome">{no.nome}</span>
+          <span className="cresce" />
+          {no.custo ? <span className="bolha">{dinheiro(no.custo)}</span> : null}
+        </div>
+      </div>
+      <Galho no={no} />
+      <Alcas />
+    </div>
+  )
+})
+
+export const nodeTypes = { brief: BriefNode, tela: TelaNode, pedido: PedidoNode, imagem: ImagemNode, referencia: RefNode, video: VideoNode, modelo: ModeloNode }
 

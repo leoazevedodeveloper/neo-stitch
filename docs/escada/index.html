@@ -1,0 +1,758 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Escada do Movimento</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: uma escada vertical de 10 degraus; cada degrau = texto à esquerda + palco escuro ao vivo à direita; a matriz de
+   conceitos no topo mostra o que se repete entre degraus. Os palcos são sempre escuros (são "telas"); a página segue o tema. */
+:root {
+  --bg: #f3f4f1; --fg: #15171a; --muted: #5d636b; --linha: #d9dcd6; --card: #ffffff;
+  --accent: #3b5bdb; --accent-suave: #e6ebfb;
+  --palco: #0b0d12; --palco-fg: #e8ecf3; --palco-muted: #8a93a3;
+  --c-gsap: #12b886; --c-cursor: #f08c00; --c-ruido: #ae3ec9; --c-shader: #e64980; --c-three: #1c7ed6;
+  --c-bloom: #fab005; --c-fisica: #e8590c; --c-asset: #0ca678; --c-clipe: #7048e8;
+  --f-display: 'Bricolage Grotesque', 'Avenir Next', system-ui, sans-serif;
+  --f-body: 'Instrument Sans', 'Helvetica Neue', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #101216; --fg: #e9ecf1; --muted: #9aa2ae; --linha: #262a31; --card: #171a20; --accent: #7c95ff; --accent-suave: #1c2340;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #101216; --fg: #e9ecf1; --muted: #9aa2ae; --linha: #262a31; --card: #171a20; --accent: #7c95ff; --accent-suave: #1c2340;
+  color-scheme: dark }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.55 var(--f-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 0 64px; }
+.pagina { max-width: 1180px; margin: 0 auto; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+code, .mono { font-family: var(--f-mono); font-size: 0.86em; }
+a { color: var(--accent); }
+
+header.topo { padding-block: 48px 28px; display: grid; gap: 14px; max-width: 760px; }
+header.topo .rotulo { font: 500 12px var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+header.topo h1 { font-size: clamp(32px, 5vw, 52px); font-weight: 700; line-height: 1.05; }
+header.topo p { margin: 0; color: var(--muted); max-width: 65ch; }
+
+/* matriz de conceitos */
+.matriz-bloco { background: var(--card); border: 1px solid var(--linha); border-radius: 16px; padding: 18px; display: grid; gap: 12px; }
+.matriz-bloco h2 { font-size: 17px; }
+.matriz-bloco > p { margin: 0; color: var(--muted); font-size: 14px; max-width: 75ch; }
+.matriz-rolar { overflow-x: auto; }
+table.matriz { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 13px; }
+.matriz th, .matriz td { padding: 7px 8px; text-align: center; border-bottom: 1px solid var(--linha); }
+.matriz th:first-child, .matriz td:first-child { text-align: left; white-space: nowrap; }
+.matriz thead th { font: 500 11px var(--f-mono); letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); vertical-align: bottom; }
+.matriz tbody tr:hover { background: var(--accent-suave); }
+.matriz a { color: var(--fg); text-decoration: none; }
+.matriz a:hover { color: var(--accent); }
+.matriz .n { font-family: var(--f-mono); color: var(--muted); margin-right: 8px; }
+.ponto { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+.matriz tfoot td { font: 500 12px var(--f-mono); color: var(--muted); border-bottom: 0; }
+
+/* chips de conceito */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: 12px; font: 500 11.5px var(--f-mono);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); color: color-mix(in srgb, var(--c) 75%, var(--fg));
+  background: color-mix(in srgb, var(--c) 9%, var(--card)); }
+.chip::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.k-gsap { --c: var(--c-gsap); } .k-cursor { --c: var(--c-cursor); } .k-ruido { --c: var(--c-ruido); } .k-shader { --c: var(--c-shader); }
+.k-three { --c: var(--c-three); } .k-bloom { --c: var(--c-bloom); } .k-fisica { --c: var(--c-fisica); } .k-asset { --c: var(--c-asset); }
+.k-clipe { --c: var(--c-clipe); }
+
+/* degraus */
+.degraus { display: grid; gap: 22px; margin-top: 34px; }
+.degrau { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.45fr); gap: 22px; align-items: start;
+  padding-top: 22px; border-top: 1px solid var(--linha); }
+.degrau .texto { display: grid; gap: 10px; min-width: 0; }
+.degrau .num { font: 500 12px var(--f-mono); color: var(--muted); letter-spacing: 0.06em; }
+.degrau h2 { font-size: 24px; font-weight: 700; }
+.degrau p { margin: 0; color: var(--muted); }
+.degrau dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 14px; }
+.degrau dt { font: 500 11px var(--f-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); padding-top: 3px; }
+.degrau dd { margin: 0; }
+.nota { font-size: 13.5px; padding: 10px 12px; border-radius: 10px; background: var(--accent-suave); color: var(--fg); }
+.nota b { font-weight: 600; }
+
+.palco { position: relative; aspect-ratio: 16 / 10; max-width: 100%; border-radius: 14px; overflow: hidden; background: var(--palco);
+  color: var(--palco-fg); isolation: isolate; }
+.palco canvas { display: block; width: 100%; height: 100%; }
+.palco .dica { position: absolute; left: 12px; bottom: 10px; z-index: 5; font: 500 11px var(--f-mono); color: var(--palco-muted);
+  pointer-events: none; letter-spacing: 0.03em; }
+.palco .botoes { position: absolute; right: 10px; bottom: 10px; z-index: 5; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.palco button { font: 500 12px var(--f-mono); height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid #2c3340; background: #161b24;
+  color: var(--palco-fg); cursor: pointer; }
+.palco button:hover { border-color: #4b5a74; }
+.palco button:focus-visible { outline: 2px solid #7c95ff; outline-offset: 2px; }
+.palco .info { position: absolute; left: 12px; top: 10px; z-index: 5; font: 500 11px var(--f-mono); color: var(--palco-muted); }
+
+/* 1 · HTML + CSS */
+@property --ang { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+.d1 { display: grid; place-items: center; height: 100%; gap: 22px; grid-template-columns: repeat(2, auto); justify-content: center; align-content: center; }
+.cartao-css { --ang: 0deg; position: relative; width: 210px; padding: 16px; border-radius: 14px; background: #131823;
+  transition: transform .25s, box-shadow .25s; }
+.cartao-css::before { content: ''; position: absolute; inset: -1.5px; border-radius: 15px; z-index: -1;
+  background: conic-gradient(from var(--ang), #3b5bdb, #12b886, #f08c00, #3b5bdb); animation: girar 4s linear infinite; }
+.cartao-css:hover { transform: translateY(-4px); box-shadow: 0 14px 40px rgba(59, 91, 219, .35); }
+.cartao-css h3 { font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.cartao-css p { margin: 6px 0 0; font-size: 12.5px; color: var(--palco-muted); }
+.status { position: relative; width: 9px; height: 9px; border-radius: 50%; background: #12b886; }
+.status::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: #12b886; animation: onda 1.6s ease-out infinite; }
+.eq { display: flex; gap: 4px; align-items: flex-end; height: 46px; }
+.eq i { width: 6px; border-radius: 3px; background: linear-gradient(#7c95ff, #3b5bdb); animation: eq 1s ease-in-out infinite; }
+.eq i:nth-child(2) { animation-delay: -.2s } .eq i:nth-child(3) { animation-delay: -.45s } .eq i:nth-child(4) { animation-delay: -.7s } .eq i:nth-child(5) { animation-delay: -.3s }
+@keyframes girar { to { --ang: 360deg; } }
+@keyframes onda { to { transform: scale(3.2); opacity: 0; } }
+@keyframes eq { 0%, 100% { height: 18%; } 50% { height: 100%; } }
+
+/* 2 · GSAP */
+.d2 { display: grid; grid-template-columns: 1fr auto; gap: 18px; padding: 22px; height: 100%; align-items: center; }
+.agentes { display: grid; gap: 7px; }
+.agente { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; background: #131823; border: 1px solid #1f2633;
+  font-size: 13px; }
+.agente .bol { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid #4b5a74; }
+.agente.on { border-color: #3b5bdb; }
+.agente.on .bol { background: #7c95ff; border-color: #7c95ff; box-shadow: 0 0 12px #7c95ff; }
+.medidor { display: grid; gap: 6px; justify-items: center; font-family: var(--f-mono); }
+.medidor b { font-size: 34px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.medidor small { color: var(--palco-muted); font-size: 11px; }
+.ima { margin-top: 10px; width: 92px; height: 92px; border-radius: 50%; border: 1px dashed #4b5a74; display: grid; place-items: center; }
+.ima span { width: 46px; height: 46px; border-radius: 50%; background: #3b5bdb; box-shadow: 0 0 24px #3b5bdb; }
+
+/* 3 · SVG */
+.d3 svg { width: 100%; height: 100%; display: block; }
+.d3 .no { cursor: pointer; }
+.d3 .no circle { transition: fill .2s; }
+
+@media (max-width: 860px) {
+  .degrau { grid-template-columns: 1fr; }
+  .d1 { grid-template-columns: 1fr; }
+  .d2 { grid-template-columns: 1fr; }
+  .d2 .medidor { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .cartao-css::before, .status::after, .eq i { animation: none; } }
+</style>
+</head>
+<body>
+
+<div class="pagina">
+  <header class="topo">
+    <span class="rotulo">Do HTML ao GLB animado</span>
+    <h1>Escada do Movimento</h1>
+    <p>Os dez degraus de tecnologia para dar vida a uma interface na web, do mais simples ao mais complexo. Cada degrau tem um
+      exemplo ao vivo: mova o cursor e clique nos palcos. As etiquetas coloridas marcam os conceitos que não são um degrau, e
+      sim ferramentas que aparecem em vários deles ao mesmo tempo.</p>
+  </header>
+
+  <section class="matriz-bloco" aria-labelledby="t-matriz">
+    <h2 id="t-matriz">Conceitos que atravessam os degraus</h2>
+    <p><b>GSAP</b> não é um degrau: é o maestro que anima propriedades em qualquer camada (CSS, atributos de SVG, uniforms de
+      shader, rotação de um objeto 3D). O mesmo vale para <b>cursor</b>, <b>ruído</b> e <b>bloom</b>. Cada ponto abaixo é um
+      lugar onde o conceito aparece em ação nesta página.</p>
+    <div class="matriz-rolar">
+      <table class="matriz">
+        <thead><tr><th>Degrau</th><th>GSAP</th><th>Cursor</th><th>Ruído</th><th>Shader GLSL</th><th>Three.js</th><th>Bloom</th><th>Física</th><th>Asset 3D</th><th>Clipes e morphs</th></tr></thead>
+        <tbody id="corpo-matriz"></tbody>
+        <tfoot><tr id="pe-matriz"></tr></tfoot>
+      </table>
+    </div>
+  </section>
+
+  <div class="degraus">
+
+    <section class="degrau" id="d1" data-conceitos="cursor">
+      <div class="texto">
+        <span class="num">Degrau 1</span>
+        <h2>HTML + CSS</h2>
+        <p>Layout, texto e efeitos que o navegador desenha sozinho. Nenhuma linha de JavaScript neste palco: a borda que gira, o
+          pulso do status e o equalizador são animações de CSS.</p>
+        <dl><dt>Faz bem</dt><dd>cards, texto, transições, hover, brilhos, gradientes, desfoques</dd>
+          <dt>Para</dt><dd>em qualquer forma que não seja retângulo, texto ou gradiente</dd>
+          <dt>Ferramentas</dt><dd><code>@keyframes</code>, <code>transition</code>, <code>@property</code>, <code>conic-gradient</code></dd></dl>
+      </div>
+      <div class="palco"><div class="d1">
+        <div class="cartao-css" tabindex="0"><h3><span class="status"></span> Copywriter</h3><p>Escrevendo o roteiro de Reels sobre skills.</p></div>
+        <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+      </div><span class="dica">passe o mouse no card</span></div>
+    </section>
+
+    <section class="degrau" id="d2" data-conceitos="gsap cursor">
+      <div class="texto">
+        <span class="num">Degrau 2</span>
+        <h2>CSS + JS (coreografia)</h2>
+        <p>O mesmo HTML, agora regido por uma linha do tempo: os agentes acendem em sequência, o número conta e o círculo segue o
+          cursor com inércia.</p>
+        <dl><dt>Faz bem</dt><dd>sequências, reações a scroll e cursor, contadores, entradas encadeadas</dd>
+          <dt>Para</dt><dd>no que o CSS consegue desenhar</dd>
+          <dt>Ferramentas</dt><dd>GSAP (timeline, stagger, quickTo), ScrollTrigger, Lenis</dd></dl>
+      </div>
+      <div class="palco"><div class="d2">
+        <div class="agentes" id="agentes"></div>
+        <div class="medidor"><small>CPU</small><b id="cpu">0%</b><div class="ima" id="ima"><span></span></div></div>
+      </div><span class="dica">o círculo segue o cursor</span><div class="botoes"><button type="button" id="b2">repetir sequência</button></div></div>
+    </section>
+
+    <section class="degrau" id="d3" data-conceitos="gsap cursor ruido">
+      <div class="texto">
+        <span class="num">Degrau 3</span>
+        <h2>SVG</h2>
+        <p>Vetores animados: o arco de agentes, os anéis tracejados que giram e a luz que "enche" o conector até o nó. O título
+          ondula com um filtro de turbulência.</p>
+        <dl><dt>Faz bem</dt><dd>arcos, conectores, traços que se desenham, ícones, ondulação por filtro</dd>
+          <dt>Para</dt><dd>em volume e em milhares de elementos</dd>
+          <dt>Ferramentas</dt><dd>SVG + GSAP (<code>stroke-dashoffset</code>), <code>feTurbulence</code>; Lottie e Rive para vetores vindos de editores</dd></dl>
+      </div>
+      <div class="palco d3"><svg id="svg3" viewBox="0 0 640 400" aria-label="Arco de agentes em SVG"></svg>
+        <span class="dica">passe o mouse nos nós</span></div>
+    </section>
+
+    <section class="degrau" id="d4" data-conceitos="cursor ruido fisica">
+      <div class="texto">
+        <span class="num">Degrau 4</span>
+        <h2>Canvas 2D</h2>
+        <p>Pixels desenhados por código, quadro a quadro: 1.400 partículas seguem um campo de fluxo, deixam rastro e fogem do
+          cursor com velocidade e atrito.</p>
+        <dl><dt>Faz bem</dt><dd>centenas a poucos milhares de partículas, ondas, gráficos vivos</dd>
+          <dt>Para</dt><dd>na CPU: dezenas de milhares ficam lentas; tudo é plano</dd>
+          <dt>Ferramentas</dt><dd>Canvas API, p5.js</dd></dl>
+      </div>
+      <div class="palco"><canvas id="c4"></canvas><span class="dica">mova o cursor pelas partículas</span></div>
+    </section>
+
+    <section class="degrau" id="d5" data-conceitos="cursor ruido shader">
+      <div class="texto">
+        <span class="num">Degrau 5</span>
+        <h2>Shader de tela</h2>
+        <p>A GPU calcula a cor de cada pixel ao mesmo tempo: uma aurora em ruído fractal com domain warp, iluminada onde o cursor
+          está. É o tipo de fundo vivo do New Era.</p>
+        <dl><dt>Faz bem</dt><dd>fundos vivos, gradientes que fluem, distorção de imagem, ruído</dd>
+          <dt>Para</dt><dd>em objetos e profundidade: é um retângulo pintado</dd>
+          <dt>Ferramentas</dt><dd>WebGL com fragment shader, OGL, estilo Shadertoy</dd></dl>
+      </div>
+      <div class="palco"><canvas id="c5"></canvas><span class="dica">a luz segue o cursor</span></div>
+    </section>
+
+    <section class="degrau" id="d6" data-conceitos="gsap cursor three bloom">
+      <div class="texto">
+        <span class="num">Degrau 6</span>
+        <h2>Cena 3D procedural</h2>
+        <p>Objetos 3D montados com formas prontas: um núcleo, anéis e luas em órbita, luz de verdade e bloom. A câmera inclina com
+          o cursor; o clique dispara um pulso.</p>
+        <dl><dt>Faz bem</dt><dd>objetos geométricos, iluminação, profundidade, câmera</dd>
+          <dt>Para</dt><dd>em objetos detalhados ou orgânicos</dd>
+          <dt>Ferramentas</dt><dd>Three.js com materiais prontos, UnrealBloomPass</dd></dl>
+      </div>
+      <div class="palco"><canvas id="c6"></canvas><span class="dica">mova o cursor · clique para pulsar</span></div>
+    </section>
+
+    <section class="degrau" id="d7" data-conceitos="gsap cursor ruido shader three bloom">
+      <div class="texto">
+        <span class="num">Degrau 7</span>
+        <h2>3D com shaders próprios</h2>
+        <p>60 mil partículas na GPU, deformadas por ruído no vertex shader, trocando de forma (esfera, nó, X) a cada clique, dentro
+          de uma grade em wireframe que acende perto do cursor.</p>
+        <dl><dt>Faz bem</dt><dd>dezenas a centenas de milhares de partículas, deformação, troca de forma</dd>
+          <dt>Para</dt><dd>na física: cada partícula não "lembra" de onde veio</dd>
+          <dt>Ferramentas</dt><dd>Three.js + ShaderMaterial, amostragem de pontos de uma forma</dd></dl>
+        <div class="nota"><b>New Era e Auralis moram aqui.</b> O New Era é a nuvem de pontos com ruído + o fundo do degrau 5. O
+          Auralis é a troca de forma + a grade que acende com o cursor (no site, a troca vem do scroll).</div>
+      </div>
+      <div class="palco"><canvas id="c7"></canvas><span class="dica">mova o cursor · clique para trocar a forma</span></div>
+    </section>
+
+    <section class="degrau" id="d8" data-conceitos="cursor ruido shader three fisica">
+      <div class="texto">
+        <span class="num">Degrau 8</span>
+        <h2>Simulação na GPU (GPGPU)</h2>
+        <p>16 mil partículas com posição e velocidade guardadas em texturas, atualizadas pela GPU a cada quadro: seguem um campo de
+          fluxo (curl noise) e são atraídas pelo cursor com inércia de verdade.</p>
+        <dl><dt>Faz bem</dt><dd>física: inércia, campos de fluxo, colisão com o cursor, fluidos</dd>
+          <dt>Para</dt><dd>na complexidade de escrever e ajustar</dd>
+          <dt>Ferramentas</dt><dd>Three.js GPUComputationRenderer, WebGPU compute</dd></dl>
+        <div class="nota"><b>Quando o Auralis vira degrau 8:</b> se as partículas tiverem inércia e reagirem ao cursor com física,
+          como aqui, em vez de só interpolar entre formas.</div>
+      </div>
+      <div class="palco"><canvas id="c8"></canvas><span class="dica">segure o clique para atrair · solte para dispersar</span></div>
+    </section>
+
+    <section class="degrau" id="d9" data-conceitos="cursor three asset">
+      <div class="texto">
+        <span class="num">Degrau 9</span>
+        <h2>Modelo 3D (GLB)</h2>
+        <p>Um arquivo 3D com malhas, materiais e hierarquia, modelado fora do navegador (aqui, no Blender, por script) e carregado
+          inteiro. Gira em qualquer ângulo, porque existe de verdade por trás.</p>
+        <dl><dt>Faz bem</dt><dd>objetos e personagens detalhados, material realista, qualquer ângulo</dd>
+          <dt>Para</dt><dd>no custo de modelar (ou gerar por image-to-3D) e ajustar</dd>
+          <dt>Ferramentas</dt><dd>Blender, image-to-3D (Hunyuan3D, TRELLIS, Tripo), GLTFLoader</dd></dl>
+      </div>
+      <div class="palco"><canvas id="c9"></canvas><span class="info" id="info9"></span><span class="dica">arraste para girar</span></div>
+    </section>
+
+    <section class="degrau" id="d10" data-conceitos="gsap cursor three asset clipe">
+      <div class="texto">
+        <span class="num">Degrau 10</span>
+        <h2>GLB animado</h2>
+        <p>O mesmo arquivo, agora com o que faz um personagem: a cabeça é um nó próprio que olha para o cursor, os olhos têm
+          expressões (morph targets) e há animações prontas no arquivo (flutuar, acenar). Falar move os olhos com a voz.</p>
+        <dl><dt>Faz bem</dt><dd>olhar, expressões, falar sincronizado, gestos, personagens</dd>
+          <dt>Para</dt><dd>no trabalho de rig: nós, pesos, morphs e animações</dd>
+          <dt>Ferramentas</dt><dd>Blender, Mixamo (humanoides), AnimationMixer, Web Audio</dd></dl>
+      </div>
+      <div class="palco"><canvas id="c10"></canvas><span class="dica">ele olha para o cursor</span>
+        <div class="botoes"><button type="button" id="falar">falar</button><button type="button" id="feliz">feliz</button><button type="button" id="acenar">acenar</button></div></div>
+    </section>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+// ---------- a matriz: lida dos data-conceitos de cada degrau ----------
+const CONCEITOS = ['gsap', 'cursor', 'ruido', 'shader', 'three', 'bloom', 'fisica', 'asset', 'clipe']
+const NOMES = ['HTML + CSS', 'CSS + JS (coreografia)', 'SVG', 'Canvas 2D', 'Shader de tela', 'Cena 3D procedural', '3D com shaders próprios', 'Simulação na GPU', 'Modelo 3D (GLB)', 'GLB animado']
+const ROTULOS = { gsap: 'GSAP', cursor: 'cursor', ruido: 'ruído', shader: 'shader GLSL', three: 'Three.js', bloom: 'bloom', fisica: 'física', asset: 'asset 3D', clipe: 'clipes e morphs' }
+const contagem = Object.fromEntries(CONCEITOS.map((c) => [c, 0]))
+const corpo = document.getElementById('corpo-matriz')
+document.querySelectorAll('.degrau').forEach((s, i) => {
+  const tem = s.dataset.conceitos.split(' ')
+  tem.forEach((c) => contagem[c]++)
+  corpo.insertAdjacentHTML('beforeend', `<tr><td><a href="#${s.id}"><span class="n">${i + 1}</span>${NOMES[i]}</a></td>${CONCEITOS.map((c) => `<td>${tem.includes(c) ? `<span class="ponto k-${c}" title="${ROTULOS[c]}"></span>` : ''}</td>`).join('')}</tr>`)
+  const chips = document.createElement('div'); chips.className = 'chips'
+  chips.innerHTML = tem.map((c) => `<span class="chip k-${c}">${ROTULOS[c]}</span>`).join('')
+  s.querySelector('.texto').insertBefore(chips, s.querySelector('.texto h2').nextSibling)
+})
+document.getElementById('pe-matriz').innerHTML = `<td>aparece em</td>${CONCEITOS.map((c) => `<td>${contagem[c]}</td>`).join('')}`
+
+// ---------- os palcos só rodam quando estão na tela ----------
+window.palcos = new Map()   // id → { iniciar(), ligar(), desligar() }
+const visivel = new Set()
+const obs = new IntersectionObserver((es) => es.forEach((e) => {
+  const p = palcos.get(e.target.id); if (!p) return
+  if (e.isIntersecting) { if (!p.pronto) { p.pronto = true; p.iniciar() } visivel.add(e.target.id); p.ligar && p.ligar() }
+  else { visivel.delete(e.target.id); p.desligar && p.desligar() }
+}), { rootMargin: '120px' })
+window.registrar = (id, p) => { palcos.set(id, p); obs.observe(document.getElementById(id)) }
+window.estaVisivel = (id) => visivel.has(id)
+// o cursor em coordenadas do palco: x,y de 0 a 1 e -1 a 1 (ndc)
+window.cursorDe = (el, e) => { const r = el.getBoundingClientRect(); const x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height; return { x, y, nx: x * 2 - 1, ny: -(y * 2 - 1), dentro: x >= 0 && x <= 1 && y >= 0 && y <= 1 } }
+window.ajustar = (canvas, ctx2d) => { const r = canvas.getBoundingClientRect(), d = Math.min(devicePixelRatio, 2); const w = Math.round(r.width * d), h = Math.round(r.height * d); if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h } return { w, h, d } }
+
+// ---------- 2 · GSAP ----------
+registrar('d2', { iniciar() {
+  const nomes = ['Agente Principal', 'Reels Editor', 'Storytelling', 'Copywriter', 'Dev']
+  const lista = document.getElementById('agentes')
+  lista.innerHTML = nomes.map((n) => `<div class="agente"><span class="bol"></span>${n}</div>`).join('')
+  const itens = [...lista.children], cpu = document.getElementById('cpu'), v = { n: 0 }
+  const tl = gsap.timeline({ repeat: -1, repeatDelay: 1.2 })
+  tl.from(itens, { x: -24, opacity: 0, duration: 0.5, stagger: 0.08, ease: 'power3.out' })
+    .to(v, { n: 87, duration: 2.2, ease: 'power2.inOut', onUpdate: () => { cpu.textContent = Math.round(v.n) + '%' } }, 0.3)
+  itens.forEach((it, i) => tl.add(() => it.classList.add('on'), 0.7 + i * 0.35).fromTo(it, { scale: 0.96 }, { scale: 1, duration: 0.4, ease: 'back.out(3)' }, 0.7 + i * 0.35))
+  tl.add(() => itens.forEach((it) => it.classList.remove('on')), '+=1.4').to(v, { n: 12, duration: 0.8, onUpdate: () => { cpu.textContent = Math.round(v.n) + '%' } }, '<')
+  document.getElementById('b2').onclick = () => tl.restart()
+  const bola = document.querySelector('#ima span'), ima = document.getElementById('ima')
+  const qx = gsap.quickTo(bola, 'x', { duration: 0.5, ease: 'power3' }), qy = gsap.quickTo(bola, 'y', { duration: 0.5, ease: 'power3' })
+  addEventListener('pointermove', (e) => { const r = ima.getBoundingClientRect(); const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2); const d = Math.hypot(dx, dy) || 1, k = Math.min(1, 140 / d); qx(dx * k * 0.25); qy(dy * k * 0.25) })
+  this.tl = tl
+}, ligar() { this.tl && this.tl.resume() }, desligar() { this.tl && this.tl.pause() } })
+
+// ---------- 3 · SVG ----------
+registrar('d3', { iniciar() {
+  const svg = document.getElementById('svg3'), NS = 'http://www.w3.org/2000/svg'
+  const C = { x: 210, y: 200 }, R = 210, nos = []
+  let h = `<defs><filter id="onda"><feTurbulence id="turb" type="fractalNoise" baseFrequency="0.02 0.06" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="9"/></filter>
+    <filter id="brilho"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+    <text x="24" y="44" fill="#e8ecf3" font-family="JetBrains Mono, monospace" font-size="20" letter-spacing="6" filter="url(#onda)">SINAL</text>
+    <g id="aneis" stroke="#4b5a74" fill="none"><circle cx="${C.x}" cy="${C.y}" r="70" stroke-dasharray="3 7"/><circle cx="${C.x}" cy="${C.y}" r="96" stroke-dasharray="40 10 4 10" stroke="#3b5bdb"/><circle cx="${C.x}" cy="${C.y}" r="120" stroke-dasharray="1 5"/></g>
+    <circle cx="${C.x}" cy="${C.y}" r="30" fill="#3b5bdb" filter="url(#brilho)"/>
+    <path d="M ${C.x + R * Math.cos(-1.05)} ${C.y + R * Math.sin(-1.05)} A ${R} ${R} 0 0 1 ${C.x + R * Math.cos(1.05)} ${C.y + R * Math.sin(1.05)}" stroke="#2c3340" fill="none" stroke-width="1.5"/>`
+  const nomes = ['Principal', 'Reels', 'VSL', 'Story', 'Skills', 'Dev', 'Copy']
+  nomes.forEach((n, i) => {
+    const a = -0.95 + (1.9 * i) / (nomes.length - 1), x = C.x + R * Math.cos(a), y = C.y + R * Math.sin(a)
+    const sx = C.x + 34 * Math.cos(a), sy = C.y + 34 * Math.sin(a)
+    nos.push({ x, y, sx, sy })
+    h += `<path class="fio" data-i="${i}" d="M ${sx} ${sy} L ${x} ${y}" stroke="#7c95ff" stroke-width="2" fill="none" filter="url(#brilho)" opacity="0"/>
+      <g class="no" data-i="${i}"><circle cx="${x}" cy="${y}" r="11" fill="#131823" stroke="#4b5a74" stroke-width="1.5"/><text x="${x + 20}" y="${y + 4}" fill="#8a93a3" font-family="Instrument Sans, sans-serif" font-size="13">${n}</text></g>`
+  })
+  svg.innerHTML = h
+  gsap.to('#aneis circle:nth-child(1)', { rotation: 360, svgOrigin: `${C.x} ${C.y}`, duration: 30, repeat: -1, ease: 'none' })
+  gsap.to('#aneis circle:nth-child(2)', { rotation: -360, svgOrigin: `${C.x} ${C.y}`, duration: 45, repeat: -1, ease: 'none' })
+  gsap.to('#turb', { attr: { baseFrequency: '0.035 0.09' }, duration: 2.4, repeat: -1, yoyo: true, ease: 'sine.inOut' })
+  const fios = [...svg.querySelectorAll('.fio')]
+  fios.forEach((f) => { const L = f.getTotalLength(); f.style.strokeDasharray = L; f.style.strokeDashoffset = L })
+  const disparar = (i) => {
+    const f = fios[i], L = f.getTotalLength(), no = svg.querySelector(`.no[data-i="${i}"] circle`)
+    gsap.killTweensOf([f, no])
+    gsap.timeline().set(f, { opacity: 1, strokeDashoffset: L })
+      .to(f, { strokeDashoffset: 0, duration: 0.55, ease: 'power2.out' })
+      .to(no, { attr: { fill: '#7c95ff', stroke: '#7c95ff' }, duration: 0.15 }, '-=0.1')
+      .to(f, { opacity: 0, duration: 0.8, delay: 1.2 })
+      .to(no, { attr: { fill: '#131823', stroke: '#4b5a74' }, duration: 0.6 }, '<')
+  }
+  svg.querySelectorAll('.no').forEach((g) => g.addEventListener('mouseenter', () => disparar(+g.dataset.i)))
+  let k = 0
+  this.tl = gsap.timeline({ repeat: -1 }).add(() => disparar(k++ % nomes.length)).to({}, { duration: 1.1 })
+}, ligar() { this.tl && this.tl.resume() }, desligar() { this.tl && this.tl.pause() } })
+
+// ---------- 4 · Canvas 2D ----------
+registrar('d4', { iniciar() {
+  const cv = document.getElementById('c4'), g = cv.getContext('2d'), N = 1400, P = []
+  let m = { x: -9, y: -9, dentro: false }, t = 0
+  for (let i = 0; i < N; i++) P.push({ x: Math.random(), y: Math.random(), vx: 0, vy: 0, h: 200 + Math.random() * 60 })
+  cv.addEventListener('pointermove', (e) => { m = cursorDe(cv, e) }); cv.addEventListener('pointerleave', () => { m.dentro = false })
+  const campo = (x, y) => Math.sin(x * 6.3 + t * 0.4) * Math.cos(y * 5.1 - t * 0.3) + Math.sin((x + y) * 3.7 + t * 0.2)
+  this.quadro = () => {
+    const { w, h } = ajustar(cv); t += 0.016
+    g.fillStyle = 'rgba(11, 13, 18, 0.16)'; g.fillRect(0, 0, w, h)
+    for (const p of P) {
+      const a = campo(p.x, p.y) * Math.PI
+      p.vx += Math.cos(a) * 0.00004; p.vy += Math.sin(a) * 0.00004
+      if (m.dentro) { const dx = p.x - m.x, dy = (p.y - m.y) * (h / w), d2 = dx * dx + dy * dy; if (d2 < 0.012) { const f = 0.00006 / (d2 + 0.0008); p.vx += dx * f; p.vy += dy * f } }
+      p.vx *= 0.96; p.vy *= 0.96; p.x += p.vx; p.y += p.vy
+      if (p.x < 0) p.x += 1; if (p.x > 1) p.x -= 1; if (p.y < 0) p.y += 1; if (p.y > 1) p.y -= 1
+      const v = Math.min(1, Math.hypot(p.vx, p.vy) * 300)
+      g.fillStyle = `hsla(${p.h + v * 60}, 90%, ${55 + v * 25}%, ${0.55 + v * 0.45})`
+      g.fillRect(p.x * w, p.y * h, 1.6, 1.6)
+    }
+  }
+}, ligar() { if (this.rodando) return; this.rodando = true; const loop = () => { if (!estaVisivel('d4')) { this.rodando = false; return } this.quadro(); requestAnimationFrame(loop) }; requestAnimationFrame(loop) } })
+
+// ---------- 5 · Shader de tela (WebGL puro) ----------
+registrar('d5', { iniciar() {
+  const cv = document.getElementById('c5'), gl = cv.getContext('webgl')
+  const vs = 'attribute vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }'
+  const fs = `precision highp float; uniform vec2 r; uniform float t; uniform vec2 m;
+    float h(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float n(vec2 p){ vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(h(i), h(i + vec2(1, 0)), u.x), mix(h(i + vec2(0, 1)), h(i + vec2(1, 1)), u.x), u.y); }
+    float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ v += a * n(p); p = p * 2.03 + 7.1; a *= 0.5; } return v; }
+    void main(){
+      vec2 uv = gl_FragCoord.xy / r; vec2 p = uv * vec2(r.x / r.y, 1.0) * 2.2;
+      vec2 q = vec2(fbm(p + t * 0.05), fbm(p + vec2(5.2, 1.3) - t * 0.04));
+      float f = fbm(p + 2.4 * q + vec2(t * 0.06, 0.0));
+      vec3 c = mix(vec3(0.02, 0.03, 0.08), vec3(0.15, 0.25, 0.85), smoothstep(0.25, 0.85, f));
+      c = mix(c, vec3(0.75, 0.3, 0.9), smoothstep(0.55, 1.0, q.y) * 0.7);
+      c = mix(c, vec3(0.1, 0.9, 0.75), smoothstep(0.6, 1.0, q.x * f) * 0.6);
+      float luz = exp(-pow(distance(uv * vec2(r.x / r.y, 1.0), m * vec2(r.x / r.y, 1.0)) / 0.32, 2.0));
+      c += luz * vec3(0.45, 0.5, 0.9) * (0.5 + f);
+      c *= 1.0 - 0.45 * length(uv - 0.5);
+      gl_FragColor = vec4(c, 1.0);
+    }`
+  const sh = (tipo, src) => { const s = gl.createShader(tipo); gl.shaderSource(s, src); gl.compileShader(s); return s }
+  const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr)
+  const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW)
+  const lp = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(lp); gl.vertexAttribPointer(lp, 2, gl.FLOAT, false, 0, 0)
+  const ur = gl.getUniformLocation(pr, 'r'), ut = gl.getUniformLocation(pr, 't'), um = gl.getUniformLocation(pr, 'm')
+  const m = { x: 0.5, y: 0.5 }, alvo = { x: 0.5, y: 0.5 }, t0 = performance.now()
+  cv.addEventListener('pointermove', (e) => { const c = cursorDe(cv, e); alvo.x = c.x; alvo.y = 1 - c.y })
+  this.quadro = () => {
+    const { w, h } = ajustar(cv); gl.viewport(0, 0, w, h)
+    m.x += (alvo.x - m.x) * 0.08; m.y += (alvo.y - m.y) * 0.08
+    gl.uniform2f(ur, w, h); gl.uniform1f(ut, (performance.now() - t0) / 1000); gl.uniform2f(um, m.x, m.y)
+    gl.drawArrays(gl.TRIANGLES, 0, 3)
+  }
+}, ligar() { if (this.rodando) return; this.rodando = true; const loop = () => { if (!estaVisivel('d5')) { this.rodando = false; return } this.quadro(); requestAnimationFrame(loop) }; requestAnimationFrame(loop) } })
+</script>
+
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/+esm'
+import { EffectComposer } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/EffectComposer.js/+esm'
+import { RenderPass } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/RenderPass.js/+esm'
+import { UnrealBloomPass } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/UnrealBloomPass.js/+esm'
+import { OutputPass } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/postprocessing/OutputPass.js/+esm'
+import { GPUComputationRenderer } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/misc/GPUComputationRenderer.js/+esm'
+import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/loaders/GLTFLoader.js/+esm'
+import { RoomEnvironment } from 'https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/environments/RoomEnvironment.js/+esm'
+
+// um palco Three.js: renderer + câmera + laço que só roda visível + redimensionamento
+function palco3d(id, { bloom = null, fov = 40, z = 6 } = {}) {
+  const canvas = document.getElementById('c' + id.slice(1))
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2))
+  renderer.setClearColor(0x0b0d12, 1)
+  const cena = new THREE.Scene(), camera = new THREE.PerspectiveCamera(fov, 1.6, 0.1, 100)
+  camera.position.z = z
+  let composer = null
+  if (bloom) {
+    composer = new EffectComposer(renderer)
+    composer.addPass(new RenderPass(cena, camera))
+    composer.addPass(new UnrealBloomPass(new THREE.Vector2(512, 320), ...bloom))
+    composer.addPass(new OutputPass())
+  }
+  const medir = () => { const r = canvas.getBoundingClientRect(); renderer.setSize(r.width, r.height, false); composer && composer.setSize(r.width, r.height); camera.aspect = r.width / r.height; camera.updateProjectionMatrix() }
+  new ResizeObserver(medir).observe(canvas); medir()
+  const mouse = { nx: 0, ny: 0, dentro: false, x: 0.5, y: 0.5 }
+  canvas.addEventListener('pointermove', (e) => Object.assign(mouse, cursorDe(canvas, e)))
+  canvas.addEventListener('pointerleave', () => { mouse.dentro = false })
+  const relogio = new THREE.Clock()
+  let quadro = null, rodando = false
+  const loop = () => {
+    if (!estaVisivel(id)) { rodando = false; return }
+    quadro(relogio.getElapsedTime(), Math.min(0.05, relogio.getDelta()))
+    composer ? composer.render() : renderer.render(cena, camera)
+    requestAnimationFrame(loop)
+  }
+  const retomar = () => { if (quadro && !rodando) { rodando = true; relogio.getDelta(); requestAnimationFrame(loop) } }
+  // o laço para quando o palco sai da tela e volta pelo retomar() (chamado pelo observador)
+  return { canvas, renderer, cena, camera, mouse, relogio, retomar, rodar(fn) { quadro = fn; retomar() } }
+}
+
+const SIMPLEX = `vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}
+float snoise(vec3 v){ const vec2 C = vec2(1.0/6.0, 1.0/3.0); const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+  vec3 i = floor(v + dot(v, C.yyy)); vec3 x0 = v - i + dot(i, C.xxx); vec3 g = step(x0.yzx, x0.xyz); vec3 l = 1.0 - g;
+  vec3 i1 = min(g.xyz, l.zxy); vec3 i2 = max(g.xyz, l.zxy); vec3 x1 = x0 - i1 + C.xxx; vec3 x2 = x0 - i2 + 2.0 * C.xxx; vec3 x3 = x0 - 1.0 + 3.0 * C.xxx;
+  i = mod(i, 289.0); vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+  float n_ = 1.0/7.0; vec3 ns = n_ * D.wyz - D.xzx; vec4 j = p - 49.0 * floor(p * ns.z * ns.z); vec4 x_ = floor(j * ns.z); vec4 y_ = floor(j - 7.0 * x_);
+  vec4 x = x_ * ns.x + ns.yyyy; vec4 y = y_ * ns.x + ns.yyyy; vec4 h = 1.0 - abs(x) - abs(y); vec4 b0 = vec4(x.xy, y.xy); vec4 b1 = vec4(x.zw, y.zw);
+  vec4 s0 = floor(b0) * 2.0 + 1.0; vec4 s1 = floor(b1) * 2.0 + 1.0; vec4 sh = -step(h, vec4(0.0)); vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy; vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+  vec3 p0 = vec3(a0.xy, h.x); vec3 p1 = vec3(a0.zw, h.y); vec3 p2 = vec3(a1.xy, h.z); vec3 p3 = vec3(a1.zw, h.w);
+  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2,p2), dot(p3,p3))); p0 *= norm.x; p1 *= norm.y; p2 *= norm.z; p3 *= norm.w;
+  vec4 m = max(0.5 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0); m = m * m;
+  return 42.0 * dot(m*m, vec4(dot(p0,x0), dot(p1,x1), dot(p2,x2), dot(p3,x3))); }`
+
+// ---------- 6 · cena 3D procedural ----------
+registrar('d6', { iniciar() {
+  const s = palco3d('d6', { bloom: [1.1, 0.5, 0.15] })
+  s.cena.add(new THREE.AmbientLight(0x8899ff, 0.35))
+  const luz = new THREE.PointLight(0x7c95ff, 40, 20); s.cena.add(luz)
+  const dir = new THREE.DirectionalLight(0xffffff, 1.2); dir.position.set(3, 4, 5); s.cena.add(dir)
+  const nucleo = new THREE.Mesh(new THREE.IcosahedronGeometry(0.75, 6), new THREE.MeshStandardMaterial({ color: 0x0d1530, emissive: 0x3b5bdb, emissiveIntensity: 1.6, roughness: 0.3, metalness: 0.4 }))
+  s.cena.add(nucleo)
+  const grupo = new THREE.Group(); s.cena.add(grupo)
+  const aneis = [1.3, 1.75, 2.2].map((r, i) => { const a = new THREE.Mesh(new THREE.TorusGeometry(r, 0.015 + i * 0.006, 12, 160), new THREE.MeshStandardMaterial({ color: 0x9fb2ff, emissive: 0x7c95ff, emissiveIntensity: 0.9 - i * 0.2 })); a.rotation.x = 1.2 + i * 0.25; a.rotation.y = i * 0.6; grupo.add(a); return a })
+  const luas = [0, 1, 2, 3, 4].map((i) => { const l = new THREE.Mesh(new THREE.SphereGeometry(0.06 + (i % 2) * 0.04, 24, 16), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: i % 2 ? 0x12b886 : 0xf08c00, emissiveIntensity: 2 })); grupo.add(l); return l })
+  s.canvas.addEventListener('click', () => {
+    gsap.fromTo(nucleo.scale, { x: 1.35, y: 1.35, z: 1.35 }, { x: 1, y: 1, z: 1, duration: 1.1, ease: 'elastic.out(1, 0.4)' })
+    gsap.fromTo(nucleo.material, { emissiveIntensity: 5 }, { emissiveIntensity: 1.6, duration: 1.2 })
+    aneis.forEach((a, i) => gsap.fromTo(a.scale, { x: 1.25, y: 1.25, z: 1.25 }, { x: 1, y: 1, z: 1, duration: 1, delay: i * 0.08, ease: 'power3.out' }))
+  })
+  s.rodar((t) => {
+    aneis.forEach((a, i) => { a.rotation.z += 0.003 * (i % 2 ? -1 : 1) * (1 + i * 0.4) })
+    luas.forEach((l, i) => { const r = 1.3 + (i % 3) * 0.45, a = t * (0.5 + i * 0.12) + i * 1.3; l.position.set(Math.cos(a) * r, Math.sin(a * 0.7) * 0.5, Math.sin(a) * r) })
+    nucleo.rotation.y = t * 0.2
+    grupo.rotation.y += ((s.mouse.dentro ? s.mouse.nx * 0.5 : 0) - grupo.rotation.y) * 0.05
+    grupo.rotation.x += ((s.mouse.dentro ? -s.mouse.ny * 0.35 : 0) - grupo.rotation.x) * 0.05
+  })
+  this.s = s
+}, ligar() { this.s && this.s.retomar() } })
+
+// ---------- 7 · 3D com shaders próprios (New Era / Auralis) ----------
+registrar('d7', { iniciar() {
+  const s = palco3d('d7', { bloom: [0.9, 0.6, 0.0], z: 6.5 })
+  const N = 60000
+  // três formas, uma posição por partícula em cada: o shader interpola entre elas
+  const esfera = new Float32Array(N * 3), no = new Float32Array(N * 3), xis = new Float32Array(N * 3), sem = new Float32Array(N)
+  const knot = new THREE.TorusKnotGeometry(1.15, 0.38, 400, 40).attributes.position
+  for (let i = 0; i < N; i++) {
+    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, rr = 1.7 * Math.cbrt(Math.random() * 0.3 + 0.7)
+    esfera.set([Math.sqrt(1 - u * u) * Math.cos(a) * rr, u * rr, Math.sqrt(1 - u * u) * Math.sin(a) * rr], i * 3)
+    const k = (Math.random() * knot.count) | 0
+    no.set([knot.getX(k) + (Math.random() - 0.5) * 0.12, knot.getY(k) + (Math.random() - 0.5) * 0.12, knot.getZ(k) + (Math.random() - 0.5) * 0.12], i * 3)
+    const bar = Math.random() < 0.5 ? 1 : -1, tt = Math.random() * 2 - 1, esp = (Math.random() - 0.5) * 0.55
+    xis.set([tt * 1.8 + esp * 0.7, tt * 1.8 * bar - esp * 0.7 * bar, (Math.random() - 0.5) * 0.5], i * 3)
+    sem[i] = Math.random()
+  }
+  const geo = new THREE.BufferGeometry()
+  geo.setAttribute('position', new THREE.BufferAttribute(esfera, 3))
+  geo.setAttribute('aNo', new THREE.BufferAttribute(no, 3))
+  geo.setAttribute('aXis', new THREE.BufferAttribute(xis, 3))
+  geo.setAttribute('aSem', new THREE.BufferAttribute(sem, 1))
+  const U = { uT: { value: 0 }, uForma: { value: 0 }, uMouse: { value: new THREE.Vector2(9, 9) }, uEsc: { value: 1 } }
+  const pontos = new THREE.Points(geo, new THREE.ShaderMaterial({
+    uniforms: U, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: SIMPLEX + `
+      attribute vec3 aNo; attribute vec3 aXis; attribute float aSem; uniform float uT; uniform float uForma; uniform vec2 uMouse; uniform float uEsc;
+      varying float vBrilho; varying float vSem;
+      void main(){
+        float f1 = clamp(uForma, 0.0, 1.0), f2 = clamp(uForma - 1.0, 0.0, 1.0), f3 = clamp(uForma - 2.0, 0.0, 1.0);
+        vec3 p = mix(mix(mix(position, aNo, f1), aXis, f2), position, f3);
+        float n = snoise(p * 0.9 + vec3(0.0, 0.0, uT * 0.25));
+        p += normalize(p + 0.0001) * n * 0.18;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0); vec4 cp = projectionMatrix * mv;
+        vec2 tela = cp.xy / cp.w; float d = distance(tela, uMouse);
+        float empurra = smoothstep(0.35, 0.0, d);
+        mv.xy += normalize(tela - uMouse + 0.0001) * empurra * 0.6;
+        gl_Position = projectionMatrix * mv;
+        vBrilho = 0.35 + 0.65 * (0.5 + 0.5 * n) + empurra * 1.5; vSem = aSem;
+        gl_PointSize = (1.4 + aSem * 2.2) * uEsc * (6.0 / -mv.z);
+      }`,
+    fragmentShader: `varying float vBrilho; varying float vSem;
+      void main(){ float d = length(gl_PointCoord - 0.5); float a = smoothstep(0.5, 0.0, d);
+        vec3 c = mix(vec3(0.55, 0.45, 1.0), vec3(0.95, 0.6, 1.0), vSem); gl_FragColor = vec4(c * vBrilho * a * 0.55, 1.0); }`,
+  }))
+  s.cena.add(pontos)
+  // a grade em wireframe (cilindro) que acende perto do cursor
+  const cil = new THREE.WireframeGeometry(new THREE.CylinderGeometry(2.6, 2.6, 4.6, 36, 12, true))
+  const grade = new THREE.LineSegments(cil, new THREE.ShaderMaterial({
+    uniforms: U, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `uniform vec2 uMouse; varying float vPerto; varying float vZ;
+      void main(){ vec4 cp = projectionMatrix * modelViewMatrix * vec4(position, 1.0); vPerto = smoothstep(0.5, 0.0, distance(cp.xy / cp.w, uMouse)); vZ = position.z; gl_Position = cp; }`,
+    fragmentShader: `varying float vPerto; varying float vZ;
+      void main(){ vec3 c = mix(vec3(0.16, 0.18, 0.26), vec3(0.85, 0.45, 1.0), vPerto); gl_FragColor = vec4(c * (0.5 + 0.9 * vPerto), 1.0); }`,
+  }))
+  s.cena.add(grade)
+  let forma = 0
+  s.canvas.addEventListener('click', () => { forma = (forma + 1) % 3; gsap.to(U.uForma, { value: forma === 0 ? 3 : forma, duration: 1.6, ease: 'power3.inOut', onComplete: () => { if (forma === 0) U.uForma.value = 0 } }) })
+  s.rodar((t) => {
+    U.uT.value = t; U.uEsc.value = s.renderer.getPixelRatio()
+    const alvo = s.mouse.dentro ? new THREE.Vector2(s.mouse.nx, s.mouse.ny) : new THREE.Vector2(9, 9)
+    U.uMouse.value.lerp(alvo, s.mouse.dentro ? 0.2 : 1)
+    pontos.rotation.y = t * 0.12; grade.rotation.y = -t * 0.04
+  })
+  this.s = s
+}, ligar() { this.s && this.s.retomar() } })
+
+// ---------- 8 · simulação na GPU ----------
+registrar('d8', { iniciar() {
+  const s = palco3d('d8', { z: 5 })
+  const L = 128, N = L * L
+  const gpu = new GPUComputationRenderer(L, L, s.renderer)
+  const pos0 = gpu.createTexture(), vel0 = gpu.createTexture()
+  for (let i = 0; i < N; i++) { const a = Math.random() * Math.PI * 2, r = Math.sqrt(Math.random()) * 2.4; pos0.image.data.set([Math.cos(a) * r, Math.sin(a) * r * 0.62, 0, Math.random()], i * 4) }
+  const velV = gpu.addVariable('tVel', SIMPLEX + `
+    uniform float uT; uniform vec3 uMouse; uniform float uAtrai;
+    vec3 curl(vec3 p){ float e = 0.1; vec3 dx = vec3(e,0,0), dy = vec3(0,e,0), dz = vec3(0,0,e);
+      float x = snoise(p+dy) - snoise(p-dy) - (snoise(p+dz+7.0) - snoise(p-dz+7.0));
+      float y = snoise(p+dz+7.0) - snoise(p-dz+7.0) - (snoise(p+dx+13.0) - snoise(p-dx+13.0));
+      float z = snoise(p+dx+13.0) - snoise(p-dx+13.0) - (snoise(p+dy) - snoise(p-dy)); return vec3(x, y, z) / (2.0 * e); }
+    void main(){ vec2 uv = gl_FragCoord.xy / resolution.xy; vec3 p = texture2D(tPos, uv).xyz; vec3 v = texture2D(tVel, uv).xyz;
+      vec3 c = curl(p * 0.55 + vec3(0.0, 0.0, uT * 0.08)); c.z *= 0.2;
+      v += c * 0.0016;
+      vec3 d = uMouse - p; float dist = length(d) + 0.05;
+      v += normalize(d) * uAtrai * 0.012 / (dist * dist + 0.3);
+      v -= normalize(d) * (1.0 - uAtrai) * 0.004 * smoothstep(1.0, 0.0, dist);
+      v -= p * 0.0006;
+      v *= 0.965; gl_FragColor = vec4(v, 1.0); }`, vel0)
+  const posV = gpu.addVariable('tPos', `void main(){ vec2 uv = gl_FragCoord.xy / resolution.xy; vec4 p = texture2D(tPos, uv); vec3 v = texture2D(tVel, uv).xyz;
+    gl_FragColor = vec4(p.xyz + v, p.w); }`, pos0)
+  gpu.setVariableDependencies(velV, [velV, posV]); gpu.setVariableDependencies(posV, [velV, posV])
+  Object.assign(velV.material.uniforms, { uT: { value: 0 }, uMouse: { value: new THREE.Vector3(9, 9, 0) }, uAtrai: { value: 0 } })
+  const erro = gpu.init(); if (erro) console.error(erro)
+  const ref = new Float32Array(N * 2); for (let i = 0; i < N; i++) ref.set([(i % L + 0.5) / L, (Math.floor(i / L) + 0.5) / L], i * 2)
+  const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); geo.setAttribute('aRef', new THREE.BufferAttribute(ref, 2))
+  const mat = new THREE.ShaderMaterial({ uniforms: { tPos: { value: null }, tVel: { value: null }, uEsc: { value: 1 } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `uniform sampler2D tPos; uniform sampler2D tVel; uniform float uEsc; attribute vec2 aRef; varying float vV; varying float vS;
+      void main(){ vec4 p = texture2D(tPos, aRef); vec3 v = texture2D(tVel, aRef).xyz; vV = clamp(length(v) * 30.0, 0.0, 1.0); vS = p.w;
+        vec4 mv = modelViewMatrix * vec4(p.xyz + position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = (1.6 + vV * 2.0) * uEsc; }`,
+    fragmentShader: `varying float vV; varying float vS; void main(){ float a = smoothstep(0.5, 0.0, length(gl_PointCoord - 0.5));
+      vec3 c = mix(vec3(0.1, 0.55, 1.0), vec3(1.0, 0.55, 0.2), vV); c = mix(c, vec3(0.2, 0.95, 0.75), vS * (1.0 - vV) * 0.5); gl_FragColor = vec4(c * a * (0.35 + vV), 1.0); }` })
+  const pts = new THREE.Points(geo, mat); pts.frustumCulled = false; s.cena.add(pts)
+  let segurando = false
+  s.canvas.addEventListener('pointerdown', () => { segurando = true }); addEventListener('pointerup', () => { segurando = false })
+  const plano = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), ray = new THREE.Raycaster(), alvo = new THREE.Vector3()
+  s.rodar((t) => {
+    if (s.mouse.dentro) { ray.setFromCamera(new THREE.Vector2(s.mouse.nx, s.mouse.ny), s.camera); ray.ray.intersectPlane(plano, alvo); velV.material.uniforms.uMouse.value.copy(alvo) }
+    else velV.material.uniforms.uMouse.value.set(9, 9, 0)
+    const u = velV.material.uniforms; u.uT.value = t; u.uAtrai.value += ((segurando ? 1 : 0) - u.uAtrai.value) * 0.1
+    gpu.compute()
+    mat.uniforms.tPos.value = gpu.getCurrentRenderTarget(posV).texture; mat.uniforms.tVel.value = gpu.getCurrentRenderTarget(velV).texture
+    mat.uniforms.uEsc.value = s.renderer.getPixelRatio()
+  })
+  this.s = s
+}, ligar() { this.s && this.s.retomar() } })
+
+// ---------- 9 e 10 · o GLB ----------
+// o robo.glb modelado no Blender vai publicado como glTF em JSON (o mesmo padrão, em texto); aqui ele volta a ser o GLB binário
+// na memória (cabeçalho + bloco JSON + bloco BIN) e o GLTFLoader lê como leria o arquivo original
+let glb = null
+async function carregarGLB() {
+  if (!glb) {
+    const j = await (await fetch('robo.gltf.json')).json()
+    const bin = Uint8Array.from(atob(j.buffers[0].uri.split(',')[1]), (c) => c.charCodeAt(0))
+    delete j.buffers[0].uri
+    let json = new TextEncoder().encode(JSON.stringify(j))
+    const pj = (4 - (json.length % 4)) % 4, pb = (4 - (bin.length % 4)) % 4
+    const total = 12 + 8 + json.length + pj + 8 + bin.length + pb
+    const buf = new ArrayBuffer(total), v = new DataView(buf), u8 = new Uint8Array(buf)
+    v.setUint32(0, 0x46546c67, true); v.setUint32(4, 2, true); v.setUint32(8, total, true)
+    v.setUint32(12, json.length + pj, true); v.setUint32(16, 0x4e4f534a, true); u8.set(json, 20); u8.fill(0x20, 20 + json.length, 20 + json.length + pj)
+    const o = 20 + json.length + pj
+    v.setUint32(o, bin.length + pb, true); v.setUint32(o + 4, 0x004e4942, true); u8.set(bin, o + 8)
+    glb = buf
+  }
+  return new Promise((ok, erro) => new GLTFLoader().parse(glb.slice(0), '', ok, erro))
+}
+function luzes(s) {
+  s.renderer.toneMapping = THREE.ACESFilmicToneMapping; s.renderer.toneMappingExposure = 1.05
+  const pm = new THREE.PMREMGenerator(s.renderer); s.cena.environment = pm.fromScene(new RoomEnvironment(), 0.04).texture
+  const chave = new THREE.DirectionalLight(0xffffff, 1.4); chave.position.set(2, 3, 4); s.cena.add(chave)
+  const recorte = new THREE.DirectionalLight(0x7c95ff, 2.2); recorte.position.set(-3, 1, -3); s.cena.add(recorte)
+  const chao = new THREE.Mesh(new THREE.CircleGeometry(3, 64), new THREE.MeshBasicMaterial({ color: 0x3b5bdb, transparent: true, opacity: 0.12 }))
+  chao.rotation.x = -Math.PI / 2; chao.position.y = -1.25; s.cena.add(chao)
+}
+
+registrar('d9', { async iniciar() {
+  const s = palco3d('d9', { fov: 32, z: 6.2 }); luzes(s)
+  s.camera.position.set(0, 0.7, 7); s.camera.lookAt(0, 0.45, 0)
+  const gltf = await carregarGLB(), robo = gltf.scene
+  s.cena.add(robo)
+  let malhas = 0, morphs = 0; robo.traverse((o) => { if (o.isMesh) { malhas++; morphs += o.morphTargetInfluences ? o.morphTargetInfluences.length : 0 } })
+  document.getElementById('info9').textContent = `robo (glTF) · ${(gltf.parser.json.nodes || []).length} nós · ${malhas} malhas · ${morphs} morph targets · ${gltf.animations.length} clipes`
+  let arrastando = false, ultX = 0, vel = 0.004, rotY = 0.5
+  s.canvas.addEventListener('pointerdown', (e) => { arrastando = true; ultX = e.clientX; s.canvas.setPointerCapture(e.pointerId) })
+  s.canvas.addEventListener('pointermove', (e) => { if (!arrastando) return; vel = (e.clientX - ultX) * 0.01; rotY += vel; ultX = e.clientX })
+  s.canvas.addEventListener('pointerup', () => { arrastando = false })
+  s.rodar(() => { if (!arrastando) { vel += (0.004 - vel) * 0.03; rotY += vel } robo.rotation.y = rotY })
+  this.s = s
+}, ligar() { this.s && this.s.retomar() } })
+
+registrar('d10', { async iniciar() {
+  const s = palco3d('d10', { fov: 32, z: 6.2 }); luzes(s)
+  s.camera.position.set(0, 0.7, 7); s.camera.lookAt(0, 0.45, 0)
+  const gltf = await carregarGLB(), robo = gltf.scene
+  s.cena.add(robo)
+  const cabeca = robo.getObjectByName('cabeca_pivo')
+  const olhos = []; robo.traverse((o) => { if (o.isMesh && o.morphTargetDictionary && 'piscar' in o.morphTargetDictionary) olhos.push(o) })
+  const matOlho = olhos[0].material
+  const mixer = new THREE.AnimationMixer(robo)
+  const clipe = (n) => mixer.clipAction(THREE.AnimationClip.findByName(gltf.animations, n))
+  clipe('flutuar').play()
+  const acenar = clipe('acenar'); acenar.setLoop(THREE.LoopOnce, 1); acenar.clampWhenFinished = false
+  const morph = { piscar: 0, feliz: 0, falar: 0 }
+  const aplicar = () => olhos.forEach((o) => { for (const k in morph) o.morphTargetInfluences[o.morphTargetDictionary[k]] = morph[k] })
+  // piscar sozinho de tempos em tempos
+  const piscar = () => { gsap.to(morph, { piscar: 1, duration: 0.07, yoyo: true, repeat: 1, ease: 'power1.in' }); gsap.delayedCall(2.5 + Math.random() * 3, piscar) }
+  gsap.delayedCall(1.5, piscar)
+  document.getElementById('feliz').onclick = () => gsap.timeline().to(morph, { feliz: 1, duration: 0.35, ease: 'back.out(2)' }).to(morph, { feliz: 0, duration: 0.5, delay: 1.6 })
+  document.getElementById('acenar').onclick = () => { acenar.reset().play() }
+  // falar: uma "voz" sintética pelo Web Audio; o volume mexe os olhos (morph falar) e o brilho
+  let analisador = null, buf = null, ctx = null
+  document.getElementById('falar').onclick = () => {
+    ctx = ctx || new AudioContext()
+    analisador = ctx.createAnalyser(); analisador.fftSize = 256; buf = new Uint8Array(analisador.fftSize)
+    const ganho = ctx.createGain(), osc = ctx.createOscillator(), filtro = ctx.createBiquadFilter()
+    osc.type = 'sawtooth'; filtro.type = 'bandpass'; filtro.Q.value = 6
+    osc.connect(filtro).connect(ganho).connect(analisador).connect(ctx.destination)
+    const t0 = ctx.currentTime; ganho.gain.setValueAtTime(0, t0)
+    for (let i = 0; i < 14; i++) {
+      const ti = t0 + i * 0.13, f = 140 + Math.random() * 90
+      osc.frequency.setValueAtTime(f, ti); filtro.frequency.setValueAtTime(500 + Math.random() * 1400, ti)
+      ganho.gain.linearRampToValueAtTime(i % 4 === 3 ? 0.02 : 0.18, ti + 0.04); ganho.gain.linearRampToValueAtTime(0.03, ti + 0.11)
+    }
+    ganho.gain.linearRampToValueAtTime(0, t0 + 1.9)
+    osc.start(t0); osc.stop(t0 + 2)
+  }
+  const alvo = { x: 0, y: 0 }
+  s.rodar((t, dt) => {
+    mixer.update(dt)
+    if (s.mouse.dentro) { alvo.x = s.mouse.nx * 0.75; alvo.y = -s.mouse.ny * 0.45 } else { alvo.x = Math.sin(t * 0.5) * 0.2; alvo.y = 0 }
+    cabeca.rotation.y += (alvo.x - cabeca.rotation.y) * 0.12
+    cabeca.rotation.x += (alvo.y - cabeca.rotation.x) * 0.12
+    let vol = 0
+    if (analisador) { analisador.getByteTimeDomainData(buf); let sq = 0; for (const v of buf) sq += ((v - 128) / 128) ** 2; vol = Math.min(1, Math.sqrt(sq / buf.length) * 5) }
+    morph.falar += (vol - morph.falar) * 0.4
+    matOlho.emissiveIntensity = 1.5 + morph.falar * 3.5 + morph.feliz * 1.2
+    aplicar()
+  })
+  this.s = s
+}, ligar() { this.s && this.s.retomar() } })
+</script>
+
+</body>
+</html>

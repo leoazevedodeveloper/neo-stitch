@@ -7,9 +7,10 @@ export type Comentario = { id: string; autor: 'voce' | 'claude'; texto: string; 
 export type Direcao = { nome: string; tese: string; ativa: boolean }
 export type Variacao = { nome: string; prompt?: string; tese?: string }
 
+
 export type No = {
   id: string
-  tipo: 'brief' | 'tela' | 'pedido' | 'imagem' | 'referencia' | 'video'
+  tipo: 'brief' | 'tela' | 'pedido' | 'imagem' | 'referencia' | 'video' | 'modelo'
   criado: string
   atualizado?: string
   pos: Pos | null
@@ -42,6 +43,7 @@ export type No = {
   segundos?: number
   // imagem / referência
   pedido?: string
+  giro?: number     // modelo 3D: graus para ficar de frente no visualizador
   nome?: string
   prompt?: string
   estado?: Estado
@@ -78,7 +80,15 @@ export type EstadoProjeto = {
 }
 
 /** Imagem que avançou (o "fogo"): os vídeos que saíram dela e as tentativas de HTML em impl/<código>/vN/. */
-export type Avanco = { videos: string[]; impl: string[] }
+// origens: versão → vídeo de onde saiu · trabalhos: versão → a ficha impl.json do agente que a faz (docs/AGENTES.md)
+export type Avanco = { videos: string[]; impl: string[]; origens?: Record<string, string>; trabalhos?: Record<string, Trabalho> }
+export type Trabalho = {
+  agente: string; status: 'trabalhando' | 'pronto' | 'erro' | 'abandonado'; etapa?: string; progresso?: number
+  inicio?: string; atualizado?: string; fim?: string | null; nota?: string; erro?: string | null
+  base?: string; pedido?: string  // evolução: a versão de onde saiu (v1 → v1.1) e a alteração pedida
+  entradas?: string[]             // as imagens tiradas do vídeo de onde a versão parte (a estática e a viva)
+  estado?: Estado                 // a aprovação do usuário (só o app escreve)
+}
 export type Fogo = { id: string; thumb: string; nome: string; videos: number; impl: number }
 
 export type ModeloVideo = { nome: string; duracoes: number[]; resolucoes: string[]; custo_6s: number; preco_s: number; primeiro_ultimo: boolean; tempo_teste_s?: number; nota?: string; ranking?: string; teste?: string }
@@ -111,6 +121,8 @@ const P = (slug: string) => `/api/projetos/${slug}`
 
 export const api = {
   projetos: () => req<ResumoProjeto[]>('GET', '/api/projetos'),
+  mudarImpl: (slug: string, img: string, versao: string, estado: Estado) => req<Trabalho>('PATCH', `${P(slug)}/impl/${img}/${versao}`, { estado }),
+  specAgentes: () => req<{ texto: string; caminho: string; raiz: string }>('GET', '/api/spec/agentes'),
   criarProjeto: (d: { nome: string; tipo: string; descricao: string }) => req<ResumoProjeto>('POST', '/api/projetos', d),
   estado: (slug: string, rev?: string) => req<EstadoProjeto>('GET', `${P(slug)}${rev ? `?rev=${rev}` : ''}`),
   mudarProjeto: (slug: string, d: Partial<Projeto>) => req<Projeto>('PATCH', P(slug), d),
@@ -137,5 +149,9 @@ export const arquivoUrl = (slug: string, caminho?: string) => (caminho ? `/proje
 
 /** Endereço da página de desenvolvimento de uma imagem com fogo. */
 export const rotaFogo = (slug: string, id: string) => `#/p/${slug}/f/${id}`
+
+/** O visualizador 3D (public/modelo.html) de um nó "modelo". */
+export const urlModelo = (slug: string, no: { arquivo?: string; giro?: number; nome?: string; id: string }) =>
+  `/modelo.html?src=${encodeURIComponent(arquivoUrl(slug, no.arquivo))}&giro=${no.giro || 0}&nome=${encodeURIComponent(`${no.id} · ${no.nome || ''}`)}`
 
 export const dinheiro = (v: number) => `$${v.toFixed(2)}`

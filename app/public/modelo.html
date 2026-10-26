@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Modelo 3D · Neo Stitch</title>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<style>
+  html, body { margin: 0; height: 100%; background: #e9eaee; font: 13px/1.4 system-ui, sans-serif; color: #333; }
+  model-viewer { width: 100%; height: 100%; --poster-color: transparent; }
+  .nome { position: fixed; left: 16px; top: 12px; padding: 4px 10px; border-radius: 8px; background: rgba(255,255,255,.8); }
+</style>
+</head>
+<body>
+<model-viewer id="mv" camera-controls auto-rotate auto-rotate-delay="0" rotation-per-second="20deg" shadow-intensity="0.6" exposure="1.05"
+  environment-image="neutral" interaction-prompt="none"></model-viewer>
+<span class="nome" id="nome"></span>
+<script>
+  // ?src=<url do .glb>&giro=<graus para ficar de frente>&nome=<rótulo>
+  const q = new URLSearchParams(location.search), mv = document.getElementById('mv')
+  mv.src = q.get('src'); mv.orientation = `0deg 0deg ${-(+q.get('giro') || 0)}deg`
+  document.getElementById('nome').textContent = q.get('nome') || ''
+</script>
+</body>
+</html>

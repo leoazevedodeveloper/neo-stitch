@@ -10,10 +10,12 @@ em HTML vivo. Decisões e escopo: [specs.md](specs.md). Como operar o canvas (fi
   `servidor.py` (API + arquivos + app compilado, porta 8730) · `neo.py` (o lado do Claude: fila, contexto, direções, estados, diário) ·
   `gerar.py` (OpenRouter /images, N em paralelo, várias referências) · `gerar_video.py` (OpenRouter /videos, um vídeo por
   modelo) · `openrouter.py` (cliente HTTP e a chave) · `pagina_videos.py` (página de comparação avulsa) · `ouvir.sh` (o Monitor
-  da fila) · `importar_jarvis.py` (import do 20-jarvisOS) · `base.py` (caminhos, trava, nós, códigos, custos, avanços/fogo).
+  da fila) · `importar_jarvis.py` (import do 20-jarvisOS) · `impl.py` (implementações vídeo → HTML por qualquer agente: reservar a vN,
+  reportar etapas, registrar as imagens geradas como assets saindo do vídeo, terminar; spec em `docs/AGENTES.md`, apontada pelo `AGENTS.md` da raiz) · `base.py` (caminhos, trava, nós,
+  códigos, custos, avanços/fogo).
 - `app/` — Vite + React + React Flow (`@xyflow/react`). Dev: `npm run dev` (porta 5173, repassa /api e /projects para 8730).
   Produção: `npm run build` → `app/dist`, servido pelo `servidor.py`.
-- `projects/<slug>/` — os dados (um JSON por nó, imagens, vídeos, thumbs, refs, impl/, brief.md, diario.md, lixeira/). Não versionar.
+- `projects/<slug>/` — os dados (um JSON por nó, imagens, vídeos, modelos 3D em models/, thumbs, refs, impl/, brief.md, diario.md, lixeira/). Não versionar.
 - `docs/` — o que o README mostra (demo, evolução imagem → vídeo → HTML) e o guia de uso (`docs/USO.md`).
 - `fila.jsonl` — fila append-only que o app escreve e o Claude ouve (`tail -F`).
 
